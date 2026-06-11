@@ -49,14 +49,26 @@ const Truco = (() => {
 
   const other = (p) => (p === "you" ? "ai" : "you");
 
+  /* shuffle a fresh deck and deal 3 cards to each seat */
+  function freshDeal() {
+    const deck = [];
+    for (const suit of DECK_SUITS)
+      for (const rank of DECK_RANKS) deck.push({ suit, rank });
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return { you: deck.slice(0, 3), ai: deck.slice(3, 6) };
+  }
+
   class Game {
-    constructor(firstDealer) {
+    constructor(firstDealer, fixedHands) {
       this.scores = { you: 0, ai: 0 };
       this.dealer = firstDealer || (Math.random() < 0.5 ? "you" : "ai");
       this.gameOver = false;
       this.gameWinner = null;
       this.events = [];
-      this.startHand();
+      this.startHand(fixedHands);
     }
 
     emit(type, data = {}) {
@@ -71,20 +83,13 @@ const Truco = (() => {
 
     /* ---------- hand setup ---------- */
 
-    startHand() {
+    startHand(fixedHands) {
       if (this.gameOver) return;
       this.dealer = other(this.dealer);
       this.mano = other(this.dealer);
 
-      const deck = [];
-      for (const suit of DECK_SUITS)
-        for (const rank of DECK_RANKS) deck.push({ suit, rank });
-      for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-      }
-
-      this.hands = { you: deck.slice(0, 3), ai: deck.slice(3, 6) };
+      const deal = fixedHands || freshDeal();
+      this.hands = { you: [...deal.you], ai: [...deal.ai] };
       this.initialHands = { you: [...this.hands.you], ai: [...this.hands.ai] };
       this.tricks = [];                 // [{you, ai, winner: 'you'|'ai'|'tie'}]
       this.current = { you: null, ai: null };
@@ -352,14 +357,14 @@ const Truco = (() => {
       this.award(winner, points);
     }
 
-    nextHand() {
+    nextHand(fixedHands) {
       if (this.gameOver) return false;
-      this.startHand();
+      this.startHand(fixedHands);
       return true;
     }
   }
 
-  return { Game, power, envidoValue, TRUCO_NAMES, TRUCO_HAND_VALUE, other };
+  return { Game, power, envidoValue, freshDeal, TRUCO_NAMES, TRUCO_HAND_VALUE, other };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = Truco;

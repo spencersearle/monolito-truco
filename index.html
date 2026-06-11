@@ -59,6 +59,7 @@
       <p class="splash-sub">TRUCO &nbsp;ARGENTINO</p>
       <p class="splash-tag">Envido · Truco · Vale Cuatro — first to 30</p>
       <button class="btn btn-gold" id="btn-start">DEAL ME IN</button>
+      <button class="btn btn-online" id="btn-online">⟡ PLAY ONLINE</button>
       <button class="btn btn-ghost" id="btn-rules">HOW TO PLAY</button>
     </div>
   </div>
@@ -69,6 +70,23 @@
       <h2>HOW TO PLAY</h2>
       <div class="rules-scroll" id="rules-content"></div>
       <button class="btn btn-gold" id="btn-close-rules">BACK</button>
+    </div>
+  </div>
+
+  <!-- Online lobby / notices overlay -->
+  <div class="overlay hidden" id="online-overlay">
+    <div class="overlay-panel online-panel">
+      <h2 id="online-title">PLAY ONLINE</h2>
+      <p class="online-status" id="online-status">Summoning a table…</p>
+      <div class="online-linkbox hidden" id="online-linkbox">
+        <input class="online-link" id="online-link" readonly aria-label="Invite link">
+        <div class="online-linkbtns">
+          <button class="btn btn-gold" id="btn-copy-link">COPY LINK</button>
+          <button class="btn btn-gold hidden" id="btn-share-link">SHARE…</button>
+        </div>
+      </div>
+      <p class="online-hint hidden" id="online-hint">Send this link to your rival — the cards fly the moment they open it.</p>
+      <button class="btn btn-ghost" id="btn-online-cancel">CANCEL</button>
     </div>
   </div>
 
@@ -130,9 +148,11 @@
     </footer>
   </main>
 
+  <script src="peerjs.min.js"></script>
   <script src="cards.js"></script>
   <script src="engine.js"></script>
   <script src="ai.js"></script>
+  <script src="net.js"></script>
   <script src="ui.js"></script>
 </body>
 </html>

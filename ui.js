@@ -1,7 +1,10 @@
 /* ============================================================
    MONOLITO · ui.js
    Presentation + game flow: drains engine events into a timed
-   animation queue, renders hands/tricks, drives the AI.
+   animation queue, renders hands/tricks, drives the AI (solo)
+   or the PeerJS link (online 1v1 — see net.js). Online play is
+   lockstep: both browsers run a full engine; the host deals and
+   broadcasts the hands, every action is replicated.
    ============================================================ */
 
 (() => {
@@ -12,6 +15,12 @@
     btnStart: $("btn-start"), btnRules: $("btn-rules"), btnCloseRules: $("btn-close-rules"),
     rulesOverlay: $("rules-overlay"), rulesContent: $("rules-content"),
     btnExit: $("btn-exit"),
+    btnOnline: $("btn-online"),
+    onlineOverlay: $("online-overlay"), onlineTitle: $("online-title"),
+    onlineStatus: $("online-status"), onlineLinkbox: $("online-linkbox"),
+    onlineLink: $("online-link"), btnCopyLink: $("btn-copy-link"),
+    btnShareLink: $("btn-share-link"), onlineHint: $("online-hint"),
+    btnOnlineCancel: $("btn-online-cancel"),
     handYou: $("hand-you"), handAi: $("hand-ai"),
     playedYou: $("played-you"), playedAi: $("played-ai"),
     trickPips: $("trick-pips"),
@@ -21,13 +30,19 @@
     pointsYou: $("points-you"), pointsAi: $("points-ai"),
     fillYou: $("fill-you"), fillAi: $("fill-ai"),
     stakeLabel: $("stake-label"),
+    labelOpp: document.querySelector("#score-ai .hud-label"),
   };
 
   let game = null;
+  let net = null;              // null = solo vs AI; { role: 'host'|'guest' } = online
+  let pendingDeal = null;      // guest: next hand received mid-animation
   let queue = [];
   let busy = false;
   let aiThinking = false;
   let bubbleTimers = { you: null, ai: null };
+
+  const OPP_NAME = () => (net ? "your rival" : "El Monolito");
+  const OPP_CAP = () => (net ? "Your rival" : "El Monolito");
 
   /* ---------- animation queue ---------- */
 
@@ -75,7 +90,7 @@
       if (deal) { c.classList.add("dealt-in"); c.style.animationDelay = `${i * 0.12}s`; }
       if (canPlay) {
         c.classList.add("playable");
-        c.addEventListener("click", () => act(() => game.playCard("you", i)));
+        c.addEventListener("click", () => localPlay(i));
       } else {
         c.classList.add("disabled");
       }
@@ -127,7 +142,7 @@
         (name === "no-quiero" ? " chip-no" : name === "mazo" ? " chip-danger" : "");
       chip.textContent = labels[name] || name;
       chip.style.animationDelay = `${i * 0.05}s`;
-      chip.addEventListener("click", () => act(() => game.call("you", name)));
+      chip.addEventListener("click", () => localCall(name));
       el.dockButtons.appendChild(chip);
     });
   }
@@ -174,7 +189,7 @@
           renderPips();
           renderStake();
           renderHands(true);
-          msg(ev.mano === "you" ? "New hand — you are mano, you lead" : "New hand — El Monolito is mano");
+          msg(ev.mano === "you" ? "New hand — you are mano, you lead" : `New hand — ${OPP_NAME()} is mano`);
         }, 700);
         break;
 
@@ -190,7 +205,7 @@
 
       case "turn":
         enqueue(() => {
-          msg(ev.player === "you" ? "Your move" : "El Monolito is thinking…");
+          msg(ev.player === "you" ? "Your move" : `${OPP_CAP()} is thinking…`);
         }, 80);
         break;
 
@@ -203,7 +218,7 @@
           else if (t.winner === "ai") { aCard?.classList.add("trick-win"); yCard?.classList.add("trick-lose"); }
           renderPips();
           msg(t.winner === "tie" ? "¡Parda! — tied trick" :
-              t.winner === "you" ? "You take the trick" : "El Monolito takes the trick");
+              t.winner === "you" ? "You take the trick" : `${OPP_CAP()} takes the trick`);
         }, 1300);
         enqueue(() => clearBattle(), 150);
         break;
@@ -213,7 +228,7 @@
           const text = CALL_TEXT[ev.name] || ev.name;
           bubble(ev.player, text);
           if (["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name)) flash(text);
-          msg(ev.player === "you" ? "Waiting for El Monolito…" : "El Monolito calls — your answer?");
+          msg(ev.player === "you" ? `Waiting for ${OPP_NAME()}…` : `${OPP_CAP()} calls — your answer?`);
         }, ["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name) ? 1400 : 900);
         break;
 
@@ -237,7 +252,7 @@
         enqueue(() => {
           msg(ev.winner === "you"
             ? `You win the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`
-            : `El Monolito wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`);
+            : `${OPP_CAP()} wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`);
         }, 1100);
         break;
       }
@@ -246,7 +261,7 @@
         enqueue(() => {
           msg(ev.caller === "you"
             ? `Declined — you score ${ev.points}`
-            : `You declined — El Monolito scores ${ev.points}`);
+            : `You declined — ${OPP_NAME()} scores ${ev.points}`);
         }, 1000);
         break;
 
@@ -267,10 +282,21 @@
           const why = ev.reason === "mazo" ? " (fold)" : ev.reason === "no-quiero" ? " (no quiero)" : "";
           msg(ev.winner === "you"
             ? `You win the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`
-            : `El Monolito wins the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`);
+            : `${OPP_CAP()} wins the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`);
         }, 1900);
         if (!game.gameOver) {
-          enqueue(() => { game.nextHand(); sync(); }, 0);
+          if (!net) {
+            enqueue(() => { game.nextHand(); sync(); }, 0);
+          } else if (net.role === "host") {
+            // host deals the next hand and broadcasts it; guest waits for it
+            enqueue(() => {
+              if (!net || !game || game.gameOver) return;
+              const fixed = Truco.freshDeal();
+              game.nextHand(fixed);
+              Net.send({ t: "deal", hands: { host: fixed.you, guest: fixed.ai } });
+              sync();
+            }, 0);
+          }
         }
         break;
 
@@ -287,16 +313,38 @@
     if (!busy) onIdle();
   }
 
-  function act(fn) {
+  function localPlay(index) {
     if (busy || !game || game.gameOver) return;
-    if (fn()) sync();
+    if (game.playCard("you", index)) {
+      if (net) Net.send({ t: "act", a: { kind: "play", index } });
+      sync();
+    }
+  }
+
+  function localCall(name) {
+    if (busy || !game || game.gameOver) return;
+    if (game.call("you", name)) {
+      if (net) Net.send({ t: "act", a: { kind: "call", name } });
+      sync();
+    }
   }
 
   function onIdle() {
     if (!game || game.gameOver) return;
+
+    // guest: a new hand arrived while the last one was still animating
+    if (net && pendingDeal) {
+      const hands = pendingDeal;
+      pendingDeal = null;
+      applyDeal(hands);
+      return;
+    }
+
     renderHands(false);
     renderChips();
     renderScores();
+
+    if (net) return; // online: the rival acts over the wire, not here
 
     // AI's move?
     const aiMustRespond = game.pending && game.pending.caller === "you";
@@ -321,18 +369,35 @@
     div.className = "endgame";
     div.innerHTML = `
       <div class="endgame-inner">
-        <div class="endgame-title">${winner === "you" ? "YOU WIN" : "EL MONOLITO WINS"}</div>
+        <div class="endgame-title">${winner === "you" ? "YOU WIN" : net ? "YOUR RIVAL WINS" : "EL MONOLITO WINS"}</div>
         <div class="endgame-sub">${game.scores.you} — ${game.scores.ai}</div>
         <button class="btn btn-gold" id="btn-again">PLAY AGAIN</button>
       </div>`;
     document.body.appendChild(div);
-    div.querySelector("#btn-again").addEventListener("click", () => {
-      div.remove();
-      newGame();
+    const btn = div.querySelector("#btn-again");
+    btn.addEventListener("click", () => {
+      if (!net) { div.remove(); newGame(); return; }
+      if (net.role === "host") { div.remove(); hostBegin(); }
+      else {
+        Net.send({ t: "again" });
+        btn.disabled = true;
+        btn.textContent = "WAITING FOR HOST…";
+      }
     });
   }
 
+  function enterStage() {
+    el.onlineOverlay.classList.add("hidden");
+    el.splash.classList.add("gone");
+    el.stage.classList.remove("hidden");
+    el.labelOpp.textContent = net ? "RIVAL" : "EL MONOLITO";
+    if (location.hash.startsWith("#join")) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  }
+
   function newGame() {
+    leaveNet();
     game = new Truco.Game();
     queue = [];
     busy = false;
@@ -345,6 +410,7 @@
     queue = [];
     busy = false;
     aiThinking = false;
+    pendingDeal = null;
     clearTimeout(bubbleTimers.you);
     clearTimeout(bubbleTimers.ai);
     el.bubbleYou.classList.add("hidden");
@@ -354,10 +420,175 @@
     el.handYou.innerHTML = "";
     el.handAi.innerHTML = "";
     el.dockButtons.innerHTML = "";
-    msg(" ");
+    msg(" ");
     document.querySelector(".endgame")?.remove();
     el.stage.classList.add("hidden");
     el.splash.classList.remove("gone");
+  }
+
+  /* ---------- online play ---------- */
+
+  function beginNet(role, manoSeat, hands) {
+    net = { role };
+    pendingDeal = null;
+    game = new Truco.Game(manoSeat, hands);
+    queue = [];
+    busy = false;
+    aiThinking = false;
+    enterStage();
+    renderScores();
+    sync();
+  }
+
+  function hostBegin() {
+    const fixed = Truco.freshDeal();
+    const mano = Math.random() < 0.5 ? "you" : "ai";
+    Net.send({
+      t: "start",
+      mano: mano === "you" ? "host" : "guest",
+      hands: { host: fixed.you, guest: fixed.ai },
+    });
+    beginNet("host", mano, fixed);
+  }
+
+  function applyDeal(hands) {
+    game.nextHand({ you: hands.guest, ai: hands.host });
+    sync();
+  }
+
+  function applyRemote(a) {
+    if (!game || game.gameOver) return;
+    const ok = a.kind === "play"
+      ? game.playCard("ai", a.index)
+      : game.call("ai", a.name);
+    if (!ok) {
+      netEnded("CONNECTION LOST", "The game fell out of sync with your rival.");
+      return;
+    }
+    sync();
+  }
+
+  function netMsg(m) {
+    if (!m || typeof m !== "object") return;
+    switch (m.t) {
+      case "start": // first game, or a host-initiated rematch
+        document.querySelector(".endgame")?.remove();
+        beginNet("guest", m.mano === "guest" ? "you" : "ai",
+          { you: m.hands.guest, ai: m.hands.host });
+        break;
+      case "deal":
+        if (!net || !game) return;
+        if (busy || queue.length) pendingDeal = m.hands;
+        else applyDeal(m.hands);
+        break;
+      case "act":
+        if (net && game) applyRemote(m.a);
+        break;
+      case "again":
+        if (net && net.role === "host" && game && game.gameOver) {
+          document.querySelector(".endgame")?.remove();
+          hostBegin();
+        }
+        break;
+      case "bye":
+        netEnded("RIVAL LEFT", "Your rival left the table.");
+        break;
+    }
+  }
+
+  /* leave intentionally: tell the rival, then tear down */
+  function leaveNet() {
+    if (!net) return;
+    Net.send({ t: "bye" });
+    net = null;
+    Net.destroy();
+  }
+
+  /* the table ended on us: rival left, connection dropped, desync */
+  function netEnded(title, text) {
+    if (!net) return;
+    net = null;
+    Net.destroy();
+    exitToSplash();
+    showNotice(title, text);
+  }
+
+  /* ---------- online overlay ---------- */
+
+  function showOverlay(title, status, { link = null, hint = false, cancelLabel = "CANCEL" } = {}) {
+    el.onlineTitle.textContent = title;
+    el.onlineStatus.textContent = status;
+    el.onlineLinkbox.classList.toggle("hidden", !link);
+    el.onlineHint.classList.toggle("hidden", !hint);
+    el.btnOnlineCancel.textContent = cancelLabel;
+    el.btnCopyLink.textContent = "COPY LINK";
+    if (link) {
+      el.onlineLink.value = link;
+      el.btnShareLink.classList.toggle("hidden", !navigator.share);
+    }
+    el.onlineOverlay.classList.remove("hidden");
+  }
+
+  function showNotice(title, text) {
+    showOverlay(title, text, { cancelLabel: "BACK" });
+  }
+
+  function closeOverlay() {
+    el.onlineOverlay.classList.add("hidden");
+    if (!net) Net.destroy(); // abandon a half-open lobby
+    if (location.hash.startsWith("#join")) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  }
+
+  function lobbyFailed(text) {
+    Net.destroy();
+    showOverlay("PLAY ONLINE", text, { cancelLabel: "BACK" });
+  }
+
+  function netError(e) {
+    const t = e && e.type;
+    if (t === "peer-unavailable") {
+      lobbyFailed("Table not found — it may have closed. Ask your rival for a fresh link.");
+    } else if (t === "timeout") {
+      lobbyFailed("Couldn't reach your rival — one of your networks may be blocking the connection. Try again or switch networks.");
+    } else if (net) {
+      netEnded("CONNECTION LOST", "The connection to your rival was lost.");
+    } else {
+      lobbyFailed("Can't reach the matchmaking server — check your connection and try again.");
+    }
+  }
+
+  function openTable() {
+    if (!Net.available()) {
+      showNotice("PLAY ONLINE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+      return;
+    }
+    showOverlay("PLAY ONLINE", "Summoning a table…");
+    Net.host({
+      onReady: (code) => {
+        const url = location.origin + location.pathname + "#join=" + code;
+        showOverlay("YOUR TABLE IS READY", "Waiting for your rival to arrive…", { link: url, hint: true });
+      },
+      onConnect: () => hostBegin(),
+      onMessage: netMsg,
+      onClose: () => netEnded("RIVAL LEFT", "Your rival left the table."),
+      onError: netError,
+    });
+  }
+
+  function joinTable(code) {
+    if (!Net.available()) {
+      showNotice("PLAY ONLINE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+      return;
+    }
+    showOverlay("JOINING TABLE", "Crossing the gold sea…");
+    Net.join(code, {
+      onConnect: () => showOverlay("JOINING TABLE", "Connected — waiting for the deal…"),
+      onMessage: netMsg,
+      onClose: () => netEnded("RIVAL LEFT", "Your rival left the table."),
+      onError: netError,
+    });
   }
 
   /* ---------- rules overlay ---------- */
@@ -376,20 +607,46 @@
     <h3>Bluffing</h3>
     <p>Lying is legal and expected. Call truco with garbage. Decline nothing. Trust no one — especially El Monolito.</p>
     <h3>Me voy al mazo</h3>
-    <p>Fold your hand and concede the current stake. In the first trick before envido it costs 2 points.</p>`;
+    <p>Fold your hand and concede the current stake. In the first trick before envido it costs 2 points.</p>
+    <h3>Play Online</h3>
+    <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table and gives you a link. Send it to a friend — the moment they open it, the cards fly. First to 30, no AI, no mercy.</p>`;
 
   /* ---------- boot ---------- */
 
   el.btnStart.addEventListener("click", () => {
-    el.splash.classList.add("gone");
-    el.stage.classList.remove("hidden");
+    enterStage();
     newGame();
+  });
+
+  el.btnOnline.addEventListener("click", openTable);
+  el.btnOnlineCancel.addEventListener("click", closeOverlay);
+
+  el.btnCopyLink.addEventListener("click", async () => {
+    const url = el.onlineLink.value;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (e) {
+      el.onlineLink.select();
+      document.execCommand("copy");
+    }
+    el.btnCopyLink.textContent = "COPIED ✓";
+    setTimeout(() => { el.btnCopyLink.textContent = "COPY LINK"; }, 1600);
+  });
+
+  el.btnShareLink.addEventListener("click", () => {
+    navigator.share({
+      title: "MONOLITO · Truco Argentino",
+      text: "Join my Truco table — first to 30:",
+      url: el.onlineLink.value,
+    }).catch(() => {});
   });
 
   el.btnRules.addEventListener("click", () => el.rulesOverlay.classList.remove("hidden"));
   el.btnCloseRules.addEventListener("click", () => el.rulesOverlay.classList.add("hidden"));
-  el.btnExit.addEventListener("click", exitToSplash);
+  el.btnExit.addEventListener("click", () => { leaveNet(); exitToSplash(); });
 
-  // deep link straight to the table
-  if (location.hash === "#play") el.btnStart.click();
+  // deep links: #join=<code> joins a table, #play goes straight to solo
+  const joinMatch = location.hash.match(/^#join=([a-z0-9]+)$/i);
+  if (joinMatch) joinTable(joinMatch[1].toLowerCase());
+  else if (location.hash === "#play") el.btnStart.click();
 })();
