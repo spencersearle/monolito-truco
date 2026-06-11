@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MONOLITO · Truco Argentino</title>
+  <meta name="description" content="Truco Argentino — a futuristic 3D card game. Envido, Truco, Retruco, Vale Cuatro. First to 30.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'&gt;&lt;circle cx='50' cy='50' r='42' fill='%23d4a02a'/&gt;&lt;circle cx='50' cy='50' r='30' fill='%230a1a3a'/&gt;&lt;circle cx='50' cy='50' r='18' fill='%23f2c94c'/&gt;&lt;/svg&gt;">
+</head>
+<body>
+
+  <!-- Flowing gold waves background -->
+  <div class="ocean" aria-hidden="true">
+    <svg class="wave wave-1" viewBox="0 0 2400 600" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="goldflow1" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8a6410" stop-opacity="0"/>
+          <stop offset="0.35" stop-color="#d4a02a" stop-opacity=".55"/>
+          <stop offset="0.6" stop-color="#f2c94c" stop-opacity=".8"/>
+          <stop offset="0.85" stop-color="#d4a02a" stop-opacity=".45"/>
+          <stop offset="1" stop-color="#8a6410" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#goldflow1)" d="M0,300 C200,180 400,420 600,300 C800,180 1000,420 1200,300 C1400,180 1600,420 1800,300 C2000,180 2200,420 2400,300 L2400,340 C2200,460 2000,220 1800,340 C1600,460 1400,220 1200,340 C1000,460 800,220 600,340 C400,460 200,220 0,340 Z"/>
+    </svg>
+    <svg class="wave wave-2" viewBox="0 0 2400 600" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="goldflow2" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#d4a02a" stop-opacity="0"/>
+          <stop offset="0.5" stop-color="#f2c94c" stop-opacity=".5"/>
+          <stop offset="1" stop-color="#d4a02a" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#goldflow2)" d="M0,320 C300,200 500,440 800,320 C1100,200 1300,440 1600,320 C1900,200 2100,440 2400,320 L2400,355 C2100,475 1900,235 1600,355 C1300,475 1100,235 800,355 C500,475 300,235 0,355 Z"/>
+    </svg>
+    <svg class="wave wave-3" viewBox="0 0 2400 600" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="goldflow3" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8a6410" stop-opacity="0"/>
+          <stop offset="0.45" stop-color="#d4a02a" stop-opacity=".35"/>
+          <stop offset="1" stop-color="#8a6410" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#goldflow3)" d="M0,280 C400,160 800,400 1200,280 C1600,160 2000,400 2400,280 L2400,330 C2000,450 1600,210 1200,330 C800,450 400,210 0,330 Z"/>
+    </svg>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- Title splash -->
+  <div class="splash" id="splash">
+    <div class="splash-inner">
+      <div class="splash-coin" aria-hidden="true"></div>
+      <h1 class="splash-title">MONOLITO</h1>
+      <p class="splash-sub">TRUCO &nbsp;ARGENTINO</p>
+      <p class="splash-tag">Envido · Truco · Vale Cuatro — first to 30</p>
+      <button class="btn btn-gold" id="btn-start">DEAL ME IN</button>
+      <button class="btn btn-ghost" id="btn-rules">HOW TO PLAY</button>
+    </div>
+  </div>
+
+  <!-- Rules overlay -->
+  <div class="overlay hidden" id="rules-overlay">
+    <div class="overlay-panel">
+      <h2>HOW TO PLAY</h2>
+      <div class="rules-scroll" id="rules-content"></div>
+      <button class="btn btn-gold" id="btn-close-rules">BACK</button>
+    </div>
+  </div>
+
+  <!-- Game stage -->
+  <main class="stage hidden" id="stage">
+
+    <header class="hud">
+      <div class="hud-score" id="score-you">
+        <span class="hud-label">YOU</span>
+        <span class="hud-points" id="points-you">0</span>
+        <div class="hud-track"><div class="hud-fill" id="fill-you"></div><div class="hud-mid"></div></div>
+      </div>
+      <div class="hud-center">
+        <span class="hud-title">MONOLITO</span>
+        <span class="hud-stake" id="stake-label">1 POINT ON THE TABLE</span>
+      </div>
+      <div class="hud-score" id="score-ai">
+        <span class="hud-label">EL MONOLITO</span>
+        <span class="hud-points" id="points-ai">0</span>
+        <div class="hud-track"><div class="hud-fill" id="fill-ai"></div><div class="hud-mid"></div></div>
+      </div>
+    </header>
+
+    <!-- 3D table -->
+    <section class="scene">
+      <div class="table-tilt">
+        <div class="table-surface">
+          <div class="table-rim"></div>
+          <div class="table-emblem"></div>
+        </div>
+      </div>
+
+      <!-- Opponent hand -->
+      <div class="hand hand-ai" id="hand-ai"></div>
+
+      <!-- Played cards -->
+      <div class="battle">
+        <div class="battle-row battle-row-ai" id="played-ai"></div>
+        <div class="trick-pips" id="trick-pips"></div>
+        <div class="battle-row battle-row-you" id="played-you"></div>
+      </div>
+
+      <!-- Player hand -->
+      <div class="hand hand-you" id="hand-you"></div>
+
+      <!-- Speech bubbles -->
+      <div class="bubble bubble-ai hidden" id="bubble-ai"></div>
+      <div class="bubble bubble-you hidden" id="bubble-you"></div>
+
+      <!-- Big call flash -->
+      <div class="callflash hidden" id="callflash"></div>
+    </section>
+
+    <!-- Action dock -->
+    <footer class="dock">
+      <div class="dock-msg" id="dock-msg">&nbsp;</div>
+      <div class="dock-buttons" id="dock-buttons"></div>
+    </footer>
+  </main>
+
+  <script src="cards.js"></script>
+  <script src="engine.js"></script>
+  <script src="ai.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MONOLITO · The Deck</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Rajdhani:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0; padding: 40px 4vw; font-family: "Rajdhani", sans-serif;
+      background: radial-gradient(120% 90% at 50% -10%, #12306e 0%, #0a1a3a 45%, #040a1c 100%);
+      color: #f5ead1; min-height: 100vh;
+    }
+    h1 { font-family: "Cinzel", serif; letter-spacing: .2em; color: #f2c94c; text-align: center; }
+    p.sub { text-align: center; letter-spacing: .15em; color: #9cc4ff; margin-bottom: 36px; }
+    h2 { font-family: "Cinzel", serif; letter-spacing: .15em; color: #d4a02a; margin: 36px 0 14px; }
+    .row { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px; }
+    .c { aspect-ratio: 2/3; filter: drop-shadow(0 8px 16px rgba(0,0,0,.5)); transition: transform .2s; }
+    .c:hover { transform: translateY(-8px) scale(1.05); }
+    .c svg { width: 100%; height: 100%; display: block; }
+    a.back { display: block; text-align: center; margin-top: 40px; color: #f2c94c; letter-spacing: .2em; }
+  </style>
+</head>
+<body>
+  <h1>THE DECK</h1>
+  <p class="sub">40 CARDS · BARAJA ESPAÑOLA · DRAWN IN SVG</p>
+  <div id="gallery"></div>
+  <a class="back" href="index.html">← BACK TO THE TABLE</a>
+  <script src="cards.js"></script>
+  <script>
+    const gallery = document.getElementById("gallery");
+    for (const suit of SUITS) {
+      const h = document.createElement("h2");
+      h.textContent = SUIT_LABEL[suit].toUpperCase();
+      gallery.appendChild(h);
+      const row = document.createElement("div");
+      row.className = "row";
+      for (const rank of [1,2,3,4,5,6,7,10,11,12]) {
+        const d = document.createElement("div");
+        d.className = "c";
+        d.innerHTML = Cards.cardSVG(suit, rank);
+        row.appendChild(d);
+      }
+      gallery.appendChild(row);
+    }
+    const h = document.createElement("h2");
+    h.textContent = "CARD BACK";
+    gallery.appendChild(h);
+    const row = document.createElement("div");
+    row.className = "row";
+    const d = document.createElement("div");
+    d.className = "c";
+    d.innerHTML = Cards.cardBackSVG();
+    row.appendChild(d);
+    gallery.appendChild(row);
+  </script>
+</body>
+</html>
