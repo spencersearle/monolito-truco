@@ -127,9 +127,10 @@ const Truco = (() => {
         const acts = ["quiero", "no-quiero"];
         if (this.pending.kind === "truco") {
           if (this.pending.level < 3) acts.push(TRUCO_NAMES[this.pending.level + 1]);
-          // "el envido está primero": initial Truco, trick 1, responder hasn't played
+          // "el envido está primero": initial Truco, trick 1, responder hasn't played.
+          // The chain must open with plain Envido; raises come after.
           if (this.pending.level === 1 && this.envidoWindowOpen(player)) {
-            acts.push("Envido", "Real Envido", "Falta Envido");
+            acts.push("Envido");
           }
         } else {
           const chain = this.pending.chain;
@@ -151,7 +152,8 @@ const Truco = (() => {
       if (this.toAct !== player) return [];
 
       const acts = ["play"];
-      if (this.envidoWindowOpen(player)) acts.push("Envido", "Real Envido", "Falta Envido");
+      // opening call is plain Envido only; Real/Falta enter as raises
+      if (this.envidoWindowOpen(player)) acts.push("Envido");
       if (this.trucoLevel === 0 || (this.trucoLevel < 3 && this.trucoRaiser === player)) {
         acts.push(TRUCO_NAMES[this.trucoLevel + 1]);
       }

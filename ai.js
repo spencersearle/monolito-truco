@@ -63,9 +63,9 @@ const TrucoAI = (() => {
 
     /* --- own turn: maybe call, else play --- */
 
-    // envido calls (window open only in trick 1 before playing)
+    // envido calls (window open only in trick 1 before playing; chain opens with plain Envido)
     if (legal.includes("Envido")) {
-      if (env >= 31 && rand() < 0.85) return { action: rand() < 0.4 ? "Real Envido" : "Envido" };
+      if (env >= 31 && rand() < 0.85) return { action: "Envido" };
       if (env >= 28 && rand() < 0.7) return { action: "Envido" };
       if (env >= 25 && rand() < 0.35) return { action: "Envido" };
       if (env <= 20 && rand() < 0.12) return { action: "Envido" }; // pure bluff

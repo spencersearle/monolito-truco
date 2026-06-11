@@ -63,7 +63,9 @@ sum **+ 20** (max 33). Three of a suit (sin flor): best two + 20. No pair: highe
 card. An *accepted* truco forecloses envido. **El envido está primero:** answering a
 first-trick Truco call with an envido call annuls the truco (it must be re-made later).
 
-**Chain:** raises only by the responder, in order Envido → Envido (once) → Real Envido →
+**Chain:** the chain always opens with plain **Envido** (house rule of this
+implementation — Real Envido and Falta Envido are only available as raises).
+Raises only by the responder, in order Envido → Envido (once) → Real Envido →
 Falta Envido (terminal). Accepted values accumulate:
 
 | Accepted chain | Points |
@@ -72,7 +74,6 @@ Falta Envido (terminal). Accepted values accumulate:
 | Envido + Envido | 4 |
 | Envido + Real Envido | 5 |
 | Envido + Envido + Real Envido | 7 |
-| Real Envido | 3 |
 | … + Falta Envido | falta value |
 
 **Falta Envido:** if both players are in **malas** (< 15), winning it wins the game;

@@ -155,17 +155,15 @@ const playBoth = (g, yi, ai_) => {
   const g = rig(
     [C("oros", 7), C("oros", 6), C("copas", 2)],
     [C("espadas", 7), C("espadas", 4), C("bastos", 2)]);
-  g.call("you", "Real Envido");
-  g.respond("ai", false);
-  eq(g.scores.you, 1, "real envido as first call rejected = 1");
-}
-{
-  const g = rig(
-    [C("oros", 7), C("oros", 6), C("copas", 2)],
-    [C("espadas", 7), C("espadas", 4), C("bastos", 2)]);
-  g.call("you", "Falta Envido");
-  g.respond("ai", false);
-  eq(g.scores.you, 1, "falta envido as first call rejected = 1");
+  const legal = g.legalActions("you");
+  eq(legal.includes("Envido"), true, "may open with Envido");
+  eq(legal.includes("Real Envido"), false, "may not open with Real Envido");
+  eq(legal.includes("Falta Envido"), false, "may not open with Falta Envido");
+  eq(g.call("you", "Real Envido"), false, "opening Real Envido is rejected");
+  g.call("you", "Envido");
+  const aiLegal = g.legalActions("ai");
+  eq(aiLegal.includes("Real Envido"), true, "Real Envido available as raise");
+  eq(aiLegal.includes("Falta Envido"), true, "Falta Envido available as raise");
 }
 
 /* ---- envido tie: mano wins ---- */
@@ -183,16 +181,18 @@ const playBoth = (g, yi, ai_) => {
   const g = rig([C("oros", 7), C("oros", 6), C("copas", 2)],
                 [C("espadas", 4), C("copas", 5), C("bastos", 2)]);
   g.scores = { you: 10, ai: 8 };  // both malas
-  g.call("you", "Falta Envido");
-  g.respond("ai", true);
+  g.call("you", "Envido");
+  g.call("ai", "Falta Envido");   // raised to falta
+  g.respond("you", true);
   eq(g.gameOver, true, "falta in malas wins the game");
 }
 {
   const g = rig([C("oros", 7), C("oros", 6), C("copas", 2)],
                 [C("espadas", 4), C("copas", 5), C("bastos", 2)]);
   g.scores = { you: 4, ai: 22 };  // leader in buenas
-  g.call("you", "Falta Envido");
-  g.respond("ai", true);
+  g.call("you", "Envido");
+  g.call("ai", "Falta Envido");
+  g.respond("you", true);
   eq(g.scores.you, 4 + 8, "falta vs buenas leader = 30-22 = 8");
 }
 

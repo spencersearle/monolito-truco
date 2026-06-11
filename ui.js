@@ -370,7 +370,7 @@
     <p><em>Suit doesn't matter otherwise — equal cards tie (parda), and ties favor whoever won the earliest trick, or the mano.</em></p>
     <h3>Envido</h3>
     <p>Called in the first trick, before you play your first card. Two cards of the same suit are worth their sum <strong>+ 20</strong> (face cards count 0). Best possible: 33.</p>
-    <p><strong>Envido</strong> = 2 pts · <strong>Real Envido</strong> = 3 pts · <strong>Falta Envido</strong> = enough points to finish the game. Raises stack (Envido + Envido + Real = 7). Decline and the caller scores the previous stake (minimum 1).</p>
+    <p>The opening call is always plain <strong>Envido</strong> (2 pts). The responder may raise: <strong>Envido</strong> again, <strong>Real Envido</strong> (+3), or <strong>Falta Envido</strong> — enough points to finish the game. Raises stack (Envido + Envido + Real = 7). Decline and the caller scores the previous stake (minimum 1).</p>
     <h3>Truco</h3>
     <p>Raise the value of the hand at any time: <strong>Truco</strong> (2) → <strong>Retruco</strong> (3) → <strong>Vale Cuatro</strong> (4). Only the side that said "quiero" may raise next. Decline and the caller takes the previous value.</p>
     <h3>Bluffing</h3>
