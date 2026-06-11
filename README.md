@@ -4,7 +4,7 @@ A fully playable **Argentine Truco** card game in the browser — you against
 **El Monolito**, an AI that bluffs. Futuristic midnight-blue table, flowing gold
 waves, 3D card interactions, and a hand-drawn SVG Spanish deck.
 
-**▶ Play it: https://spencer16078-cyber.github.io/monolito-truco/**
+**▶ Play it: https://spencersearle.github.io/monolito-truco/**
 
 ![Truco](trucoCardSheet.jpg)
 
