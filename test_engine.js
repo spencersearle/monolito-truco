@@ -151,6 +151,22 @@ const playBoth = (g, yi, ai_) => {
   g.respond("ai", false);
   eq(g.scores.you, 1, "first envido rejected = 1");
 }
+{
+  const g = rig(
+    [C("oros", 7), C("oros", 6), C("copas", 2)],
+    [C("espadas", 7), C("espadas", 4), C("bastos", 2)]);
+  g.call("you", "Real Envido");
+  g.respond("ai", false);
+  eq(g.scores.you, 1, "real envido as first call rejected = 1");
+}
+{
+  const g = rig(
+    [C("oros", 7), C("oros", 6), C("copas", 2)],
+    [C("espadas", 7), C("espadas", 4), C("bastos", 2)]);
+  g.call("you", "Falta Envido");
+  g.respond("ai", false);
+  eq(g.scores.you, 1, "falta envido as first call rejected = 1");
+}
 
 /* ---- envido tie: mano wins ---- */
 {

@@ -11,6 +11,7 @@
     splash: $("splash"), stage: $("stage"),
     btnStart: $("btn-start"), btnRules: $("btn-rules"), btnCloseRules: $("btn-close-rules"),
     rulesOverlay: $("rules-overlay"), rulesContent: $("rules-content"),
+    btnExit: $("btn-exit"),
     handYou: $("hand-you"), handAi: $("hand-ai"),
     playedYou: $("played-you"), playedAi: $("played-ai"),
     trickPips: $("trick-pips"),
@@ -339,6 +340,26 @@
     sync();
   }
 
+  function exitToSplash() {
+    game = null;
+    queue = [];
+    busy = false;
+    aiThinking = false;
+    clearTimeout(bubbleTimers.you);
+    clearTimeout(bubbleTimers.ai);
+    el.bubbleYou.classList.add("hidden");
+    el.bubbleAi.classList.add("hidden");
+    el.callflash.classList.add("hidden");
+    clearBattle();
+    el.handYou.innerHTML = "";
+    el.handAi.innerHTML = "";
+    el.dockButtons.innerHTML = "";
+    msg(" ");
+    document.querySelector(".endgame")?.remove();
+    el.stage.classList.add("hidden");
+    el.splash.classList.remove("gone");
+  }
+
   /* ---------- rules overlay ---------- */
 
   el.rulesContent.innerHTML = `
@@ -367,6 +388,7 @@
 
   el.btnRules.addEventListener("click", () => el.rulesOverlay.classList.remove("hidden"));
   el.btnCloseRules.addEventListener("click", () => el.rulesOverlay.classList.add("hidden"));
+  el.btnExit.addEventListener("click", exitToSplash);
 
   // deep link straight to the table
   if (location.hash === "#play") el.btnStart.click();

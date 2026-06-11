@@ -321,6 +321,28 @@ body {
   background: rgba(245, 234, 209, .5);
 }
 
+.exit-btn {
+  font-family: var(--font-hud);
+  font-weight: 700;
+  letter-spacing: .16em;
+  font-size: .72rem;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid rgba(156, 196, 255, .35);
+  color: rgba(156, 196, 255, .75);
+  background: rgba(10, 26, 58, .5);
+  backdrop-filter: blur(6px);
+  transition: all .18s ease;
+  align-self: flex-start;
+}
+
+.exit-btn:hover {
+  border-color: rgba(224, 82, 82, .65);
+  color: #f0a0a0;
+  box-shadow: 0 0 18px rgba(224, 82, 82, .25);
+}
+
 .hud-center {
   text-align: center;
   display: flex;
