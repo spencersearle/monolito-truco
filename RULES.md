@@ -112,6 +112,41 @@ Not implemented (standard for 2-player, "sin flor").
 First to **30 points** wins immediately, even mid-hand. Points 1–15 are *malas*,
 16–30 are *buenas*.
 
+## 11. 2v2 Team Play (four players)
+
+Verified separately against the 2v2 sources below. Seats sit in play order
+0-1-2-3; seats 0 & 2 form one team, 1 & 3 the other (partners across the
+table). All scoring is team-level; first team to 30 wins.
+
+- **Dealing / mano** — the deal passes one seat each hand; the mano (the seat
+  after the dealer) leads the first trick. Play proceeds in seat order.
+- **Tricks** — the highest card wins the trick for its *team*. If the top
+  cards all belong to one team, that team wins and the **earliest played** of
+  them leads next. If the top cards split across teams the trick is a
+  **parda** and the previous leader leads again. Parda cases 1–5 from
+  section 5 apply with team values; an all-parda hand goes to the **mano's
+  team**.
+- **Calls are team-valued** — any player may call envido (within their own
+  window) or truco; **either member of the opposing team** may answer on
+  the team's behalf. The accepting **team** (not player) holds the right to
+  raise truco.
+- **Envido declaration** — runs from the mano in seat order; a later seat
+  only wins by *strictly beating* the best value so far ("son buenas"
+  otherwise), so ties favor whoever is closer to mano. Each seat's envido
+  window closes when that seat plays its first card.
+- **Ir al mazo** — implemented as a team concession (the convention used by
+  online truco platforms; tabletop rules vary — Pagat requires both partners
+  to put their cards down, TrucoArgentino.com.ar allows playing on with the
+  remaining partner). First-trick fold with envido open still concedes 2.
+- **Señas** (partner signals) are a tabletop social mechanic and are
+  intentionally out of scope — use the table chat at your own risk.
+
+2v2 sources: [Pagat — Argentinean Truco](https://www.pagat.com/put/truco_ar.html) ·
+[Wikipedia (es) — Truco argentino](https://es.wikipedia.org/wiki/Truco_argentino) ·
+[TrucoGame — Reglamento](https://trucogame.com/pages/reglamento-de-truco-argentino) ·
+[TrucoArgentino.com.ar — Reglas](https://www.trucoargentino.com.ar/reglas/) ·
+[Mundigames — Argentinian Truco rules](https://www.mundigames.com/multiplayer/argentinian-truco/rules/)
+
 ---
 
 ### Sources

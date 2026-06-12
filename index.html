@@ -78,6 +78,15 @@
     <div class="overlay-panel online-panel">
       <h2 id="online-title">PLAY ONLINE</h2>
       <p class="online-status" id="online-status">Summoning a table…</p>
+      <div class="online-namebox hidden" id="online-namebox">
+        <label class="online-namelabel" for="online-name">YOUR NAME</label>
+        <input class="online-name" id="online-name" maxlength="14" autocomplete="off"
+               spellcheck="false" placeholder="Player">
+      </div>
+      <div class="online-modes hidden" id="online-modes">
+        <button class="btn btn-gold" id="btn-mode-1v1">1 VS 1</button>
+        <button class="btn btn-gold" id="btn-mode-2v2">2 VS 2</button>
+      </div>
       <div class="online-linkbox hidden" id="online-linkbox">
         <input class="online-link" id="online-link" readonly aria-label="Invite link">
         <div class="online-linkbtns">
@@ -85,7 +94,11 @@
           <button class="btn btn-gold hidden" id="btn-share-link">SHARE…</button>
         </div>
       </div>
+      <div class="lobby-roster hidden" id="lobby-roster"></div>
       <p class="online-hint hidden" id="online-hint">Send this link to your rival — the cards fly the moment they open it.</p>
+      <button class="btn btn-gold hidden" id="btn-start-2v2" disabled>START GAME</button>
+      <button class="btn btn-ghost hidden" id="btn-join-2v2">JOIN TABLE</button>
+      <button class="btn btn-ghost hidden" id="btn-lobby-chat">💬 TABLE TALK</button>
       <button class="btn btn-ghost" id="btn-online-cancel">CANCEL</button>
     </div>
   </div>
@@ -108,6 +121,7 @@
         <span class="hud-points" id="points-ai">0</span>
         <div class="hud-track"><div class="hud-fill" id="fill-ai"></div><div class="hud-mid"></div></div>
       </div>
+      <button class="chat-toggle hidden" id="btn-chat" title="Chat">💬<span class="chat-badge hidden" id="chat-badge">0</span></button>
       <button class="exit-btn" id="btn-exit" title="Leave the table">✕ EXIT</button>
     </header>
 
@@ -120,13 +134,27 @@
         </div>
       </div>
 
-      <!-- Opponent hand -->
+      <!-- Opponent hand (1v1 rival / 2v2 partner across the table) -->
       <div class="hand hand-ai" id="hand-ai"></div>
 
+      <!-- 2v2 side opponents -->
+      <div class="hand hand-side hand-left hidden" id="hand-left"></div>
+      <div class="hand hand-side hand-right hidden" id="hand-right"></div>
+
+      <!-- seat nameplates (2v2) -->
+      <div class="plate plate-top hidden" id="plate-top"></div>
+      <div class="plate plate-left hidden" id="plate-left"></div>
+      <div class="plate plate-right hidden" id="plate-right"></div>
+      <div class="plate plate-you hidden" id="plate-you"></div>
+
       <!-- Played cards -->
-      <div class="battle">
+      <div class="battle" id="battle">
         <div class="battle-row battle-row-ai" id="played-ai"></div>
-        <div class="trick-pips" id="trick-pips"></div>
+        <div class="battle-mid">
+          <div class="battle-slot battle-slot-left hidden" id="played-left"></div>
+          <div class="trick-pips" id="trick-pips"></div>
+          <div class="battle-slot battle-slot-right hidden" id="played-right"></div>
+        </div>
         <div class="battle-row battle-row-you" id="played-you"></div>
       </div>
 
@@ -136,6 +164,8 @@
       <!-- Speech bubbles -->
       <div class="bubble bubble-ai hidden" id="bubble-ai"></div>
       <div class="bubble bubble-you hidden" id="bubble-you"></div>
+      <div class="bubble bubble-left hidden" id="bubble-left"></div>
+      <div class="bubble bubble-right hidden" id="bubble-right"></div>
 
       <!-- Big call flash -->
       <div class="callflash hidden" id="callflash"></div>
@@ -148,10 +178,26 @@
     </footer>
   </main>
 
+  <!-- Chat (online play: lobby + in-game) -->
+  <aside class="chat hidden" id="chat-panel">
+    <div class="chat-head">
+      <span class="chat-title">TABLE TALK</span>
+      <button class="chat-close" id="btn-chat-close" title="Close chat">✕</button>
+    </div>
+    <div class="chat-log" id="chat-log"></div>
+    <form class="chat-form" id="chat-form">
+      <input class="chat-input" id="chat-input" maxlength="160" autocomplete="off"
+             spellcheck="false" placeholder="Say something…">
+      <button class="chat-send" type="submit">➤</button>
+    </form>
+  </aside>
+
   <script src="peerjs.min.js"></script>
   <script src="cards.js"></script>
   <script src="engine.js"></script>
+  <script src="engine4.js"></script>
   <script src="ai.js"></script>
+  <script src="ai4.js"></script>
   <script src="net.js"></script>
   <script src="ui.js"></script>
 </body>

@@ -2,9 +2,13 @@
    MONOLITO · ui.js
    Presentation + game flow: drains engine events into a timed
    animation queue, renders hands/tricks, drives the AI (solo)
-   or the PeerJS link (online 1v1 — see net.js). Online play is
-   lockstep: both browsers run a full engine; the host deals and
-   broadcasts the hands, every action is replicated.
+   or the PeerJS link (online — see net.js). Online play is
+   lockstep: every browser runs a full engine; the host deals
+   and broadcasts the hands, every action is replicated.
+   1v1 mirrors seats; 2v2 uses absolute seats 0-3 (teams 0&2 vs
+   1&3) with host-authoritative ordering: guests send intents,
+   the host validates, applies, and broadcasts. Bots run on the
+   host and are replicated exactly like human moves.
    ============================================================ */
 
 (() => {
@@ -21,28 +25,72 @@
     onlineLink: $("online-link"), btnCopyLink: $("btn-copy-link"),
     btnShareLink: $("btn-share-link"), onlineHint: $("online-hint"),
     btnOnlineCancel: $("btn-online-cancel"),
+    onlineNamebox: $("online-namebox"), onlineName: $("online-name"),
+    onlineModes: $("online-modes"), btnMode1v1: $("btn-mode-1v1"), btnMode2v2: $("btn-mode-2v2"),
+    lobbyRoster: $("lobby-roster"), btnStart2v2: $("btn-start-2v2"),
+    btnJoin2v2: $("btn-join-2v2"), btnLobbyChat: $("btn-lobby-chat"),
     handYou: $("hand-you"), handAi: $("hand-ai"),
+    handLeft: $("hand-left"), handRight: $("hand-right"),
+    plateTop: $("plate-top"), plateLeft: $("plate-left"),
+    plateRight: $("plate-right"), plateYou: $("plate-you"),
     playedYou: $("played-you"), playedAi: $("played-ai"),
+    playedLeft: $("played-left"), playedRight: $("played-right"),
     trickPips: $("trick-pips"),
     bubbleYou: $("bubble-you"), bubbleAi: $("bubble-ai"),
+    bubbleLeft: $("bubble-left"), bubbleRight: $("bubble-right"),
     callflash: $("callflash"),
     dockMsg: $("dock-msg"), dockButtons: $("dock-buttons"),
     pointsYou: $("points-you"), pointsAi: $("points-ai"),
     fillYou: $("fill-you"), fillAi: $("fill-ai"),
     stakeLabel: $("stake-label"),
+    labelYou: document.querySelector("#score-you .hud-label"),
     labelOpp: document.querySelector("#score-ai .hud-label"),
+    btnChat: $("btn-chat"), chatBadge: $("chat-badge"),
+    chatPanel: $("chat-panel"), chatLog: $("chat-log"),
+    chatForm: $("chat-form"), chatInput: $("chat-input"),
+    btnChatClose: $("btn-chat-close"),
   };
 
-  let game = null;
-  let net = null;              // null = solo vs AI; { role: 'host'|'guest' } = online
-  let pendingDeal = null;      // guest: next hand received mid-animation
+  /* ---------- state ---------- */
+
+  let game = null;             // 1v1 / solo engine
+  let net = null;              // null = solo vs AI; { role: 'host'|'guest' } = online 1v1
+  let rivalName = null;        // 1v1 online rival's name
+  let pendingDeal = null;      // 1v1 guest: next hand received mid-animation
+
+  let game4 = null;            // 2v2 engine (absolute seats 0-3)
+  let room = null;             // 2v2: { role, code, seats:[{kind,name,connId}], mySeat, started }
+  let pendingDeal4 = null;     // 2v2 guest: next hand received mid-animation
+  let awaitingEcho = false;    // 2v2 guest: sent an intent, waiting for host's broadcast
+  let echoTimer = null;
+  let botTimer = null;
+
   let queue = [];
   let busy = false;
   let aiThinking = false;
-  let bubbleTimers = { you: null, ai: null };
+  let bubbleTimers = { you: null, top: null, left: null, right: null };
+  let unreadChat = 0;
 
-  const OPP_NAME = () => (net ? "your rival" : "El Monolito");
-  const OPP_CAP = () => (net ? "Your rival" : "El Monolito");
+  const BOT_NAMES = ["MONOBOT", "ORO-9", "AZUR", "VALE-4"];
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const cleanName = (s) =>
+    String(s || "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 14) || "Player";
+
+  function myName() {
+    return cleanName(el.onlineName.value || localStorage.getItem("monolito-name") || "Player");
+  }
+
+  const OPP_NAME = () => (net ? (rivalName || "your rival") : "El Monolito");
+  const OPP_CAP = () => (net ? (rivalName || "Your rival") : "El Monolito");
+
+  /* 2v2 helpers: absolute seat -> table position relative to my seat */
+  const seatPos = (seat) => ["you", "left", "top", "right"][(seat - room.mySeat + 4) % 4];
+  const myTeam = () => room.mySeat % 2;
+  const seatName = (seat) => (seat === room.mySeat ? "You" : room.seats[seat].name);
+  const seatIsHuman = (seat) => room.seats[seat].kind !== "bot";
 
   /* ---------- animation queue ---------- */
 
@@ -63,7 +111,12 @@
     setTimeout(pump, delay);
   }
 
-  /* ---------- rendering ---------- */
+  function onIdle() {
+    if (game4) onIdle4();
+    else onIdle1();
+  }
+
+  /* ---------- rendering (shared) ---------- */
 
   function makeCardEl(card, facedown) {
     const div = document.createElement("div");
@@ -78,6 +131,65 @@
     div.appendChild(back);
     return div;
   }
+
+  function msg(text) { el.dockMsg.textContent = text; }
+
+  const BUBBLES = { you: () => el.bubbleYou, top: () => el.bubbleAi, left: () => el.bubbleLeft, right: () => el.bubbleRight };
+
+  function bubbleAt(pos, text, hold = 1600) {
+    const b = BUBBLES[pos]();
+    clearTimeout(bubbleTimers[pos]);
+    b.textContent = text;
+    b.classList.remove("hidden");
+    b.style.animation = "none";
+    void b.offsetWidth; // restart pop-in
+    b.style.animation = "";
+    bubbleTimers[pos] = setTimeout(() => b.classList.add("hidden"), hold);
+  }
+
+  function bubble(player, text, hold) { bubbleAt(player === "you" ? "you" : "top", text, hold); }
+
+  function flash(text) {
+    el.callflash.textContent = text;
+    el.callflash.classList.remove("hidden");
+    el.callflash.style.animation = "none";
+    void el.callflash.offsetWidth;
+    el.callflash.style.animation = "";
+    setTimeout(() => el.callflash.classList.add("hidden"), 1500);
+  }
+
+  function clearBattle() {
+    el.playedYou.innerHTML = "";
+    el.playedAi.innerHTML = "";
+    el.playedLeft.innerHTML = "";
+    el.playedRight.innerHTML = "";
+  }
+
+  const CALL_TEXT = {
+    "Envido": "¡ENVIDO!", "Real Envido": "¡REAL ENVIDO!", "Falta Envido": "¡FALTA ENVIDO!",
+    "Truco": "¡TRUCO!", "Retruco": "¡RETRUCO!", "Vale Cuatro": "¡VALE CUATRO!",
+  };
+
+  const CHIP_LABELS = {
+    "quiero": "QUIERO", "no-quiero": "NO QUIERO", "mazo": "ME VOY AL MAZO",
+    "Envido": "ENVIDO", "Real Envido": "REAL ENVIDO", "Falta Envido": "FALTA ENVIDO",
+    "Truco": "¡TRUCO!", "Retruco": "¡RETRUCO!", "Vale Cuatro": "¡VALE CUATRO!",
+  };
+
+  function renderChipButtons(legal, onPick) {
+    el.dockButtons.innerHTML = "";
+    legal.forEach((name, i) => {
+      const chip = document.createElement("button");
+      chip.className = "chip" +
+        (name === "no-quiero" ? " chip-no" : name === "mazo" ? " chip-danger" : "");
+      chip.textContent = CHIP_LABELS[name] || name;
+      chip.style.animationDelay = `${i * 0.05}s`;
+      chip.addEventListener("click", () => onPick(name));
+      el.dockButtons.appendChild(chip);
+    });
+  }
+
+  /* ---------- rendering (1v1 / solo) ---------- */
 
   function renderHands(deal) {
     el.handYou.innerHTML = "";
@@ -131,55 +243,10 @@
     el.dockButtons.innerHTML = "";
     if (busy || !game || game.handOver || game.gameOver) return;
     const legal = game.legalActions("you").filter((a) => a !== "play");
-    const labels = {
-      "quiero": "QUIERO", "no-quiero": "NO QUIERO", "mazo": "ME VOY AL MAZO",
-      "Envido": "ENVIDO", "Real Envido": "REAL ENVIDO", "Falta Envido": "FALTA ENVIDO",
-      "Truco": "¡TRUCO!", "Retruco": "¡RETRUCO!", "Vale Cuatro": "¡VALE CUATRO!",
-    };
-    legal.forEach((name, i) => {
-      const chip = document.createElement("button");
-      chip.className = "chip" +
-        (name === "no-quiero" ? " chip-no" : name === "mazo" ? " chip-danger" : "");
-      chip.textContent = labels[name] || name;
-      chip.style.animationDelay = `${i * 0.05}s`;
-      chip.addEventListener("click", () => localCall(name));
-      el.dockButtons.appendChild(chip);
-    });
+    renderChipButtons(legal, localCall);
   }
 
-  function msg(text) { el.dockMsg.textContent = text; }
-
-  function bubble(player, text, hold = 1600) {
-    const b = player === "you" ? el.bubbleYou : el.bubbleAi;
-    clearTimeout(bubbleTimers[player]);
-    b.textContent = text;
-    b.classList.remove("hidden");
-    b.style.animation = "none";
-    void b.offsetWidth; // restart pop-in
-    b.style.animation = "";
-    bubbleTimers[player] = setTimeout(() => b.classList.add("hidden"), hold);
-  }
-
-  function flash(text) {
-    el.callflash.textContent = text;
-    el.callflash.classList.remove("hidden");
-    el.callflash.style.animation = "none";
-    void el.callflash.offsetWidth;
-    el.callflash.style.animation = "";
-    setTimeout(() => el.callflash.classList.add("hidden"), 1500);
-  }
-
-  function clearBattle() {
-    el.playedYou.innerHTML = "";
-    el.playedAi.innerHTML = "";
-  }
-
-  /* ---------- event presentation ---------- */
-
-  const CALL_TEXT = {
-    "Envido": "¡ENVIDO!", "Real Envido": "¡REAL ENVIDO!", "Falta Envido": "¡FALTA ENVIDO!",
-    "Truco": "¡TRUCO!", "Retruco": "¡RETRUCO!", "Vale Cuatro": "¡VALE CUATRO!",
-  };
+  /* ---------- event presentation (1v1 / solo) ---------- */
 
   function present(ev) {
     switch (ev.type) {
@@ -306,7 +373,7 @@
     }
   }
 
-  /* ---------- flow ---------- */
+  /* ---------- flow (1v1 / solo) ---------- */
 
   function sync() {
     for (const ev of game.drainEvents()) present(ev);
@@ -329,7 +396,7 @@
     }
   }
 
-  function onIdle() {
+  function onIdle1() {
     if (!game || game.gameOver) return;
 
     // guest: a new hand arrived while the last one was still animating
@@ -367,9 +434,11 @@
   function showEndgame(winner) {
     const div = document.createElement("div");
     div.className = "endgame";
+    const title = winner === "you" ? "YOU WIN"
+      : net ? `${esc((rivalName || "YOUR RIVAL").toUpperCase())} WINS` : "EL MONOLITO WINS";
     div.innerHTML = `
       <div class="endgame-inner">
-        <div class="endgame-title">${winner === "you" ? "YOU WIN" : net ? "YOUR RIVAL WINS" : "EL MONOLITO WINS"}</div>
+        <div class="endgame-title">${title}</div>
         <div class="endgame-sub">${game.scores.you} — ${game.scores.ai}</div>
         <button class="btn btn-gold" id="btn-again">PLAY AGAIN</button>
       </div>`;
@@ -386,11 +455,762 @@
     });
   }
 
+  /* ---------- rendering (2v2) ---------- */
+
+  const HAND_ELS = { you: () => el.handYou, top: () => el.handAi, left: () => el.handLeft, right: () => el.handRight };
+  const PLAYED_ELS = { you: () => el.playedYou, top: () => el.playedAi, left: () => el.playedLeft, right: () => el.playedRight };
+  const PLATE_ELS = { you: () => el.plateYou, top: () => el.plateTop, left: () => el.plateLeft, right: () => el.plateRight };
+
+  function renderHands4(deal) {
+    const canPlay = !busy && game4 && !awaitingEcho && !game4.pending && !game4.handOver &&
+      game4.toAct === room.mySeat && game4.legalActions(room.mySeat).includes("play");
+
+    for (let seat = 0; seat < 4; seat++) {
+      const pos = seatPos(seat);
+      const holder = HAND_ELS[pos]();
+      holder.innerHTML = "";
+      game4.hands[seat].forEach((card, i) => {
+        const mine = seat === room.mySeat;
+        const c = makeCardEl(mine ? card : null, false);
+        if (deal) { c.classList.add("dealt-in"); c.style.animationDelay = `${i * 0.12}s`; }
+        if (mine) {
+          if (canPlay) {
+            c.classList.add("playable");
+            c.addEventListener("click", () => localPlay4(i));
+          } else {
+            c.classList.add("disabled");
+          }
+        }
+        holder.appendChild(c);
+      });
+    }
+  }
+
+  function renderPips4() {
+    el.trickPips.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      const pip = document.createElement("div");
+      pip.className = "pip";
+      const t = game4.tricks[i];
+      if (t) pip.classList.add(t.winner === "tie" ? "tie" : t.winner === myTeam() ? "you" : "ai");
+      el.trickPips.appendChild(pip);
+    }
+  }
+
+  function renderScores4() {
+    const us = game4.scores[myTeam()], them = game4.scores[1 - myTeam()];
+    el.pointsYou.textContent = us;
+    el.pointsAi.textContent = them;
+    el.fillYou.style.width = `${(us / 30) * 100}%`;
+    el.fillAi.style.width = `${(them / 30) * 100}%`;
+  }
+
+  function renderStake4() {
+    const v = Truco4.TRUCO_HAND_VALUE[game4.trucoLevel];
+    el.stakeLabel.textContent = `${v} POINT${v > 1 ? "S" : ""} ON THE TABLE`;
+  }
+
+  function renderPlates4() {
+    for (let seat = 0; seat < 4; seat++) {
+      const plate = PLATE_ELS[seatPos(seat)]();
+      plate.textContent = seatName(seat).toUpperCase();
+      plate.className = `plate plate-${seatPos(seat)} team-${seat % 2 === myTeam() ? 0 : 1}`;
+      const active = game4 && !game4.handOver && !game4.gameOver &&
+        (game4.pending ? game4.legalActions(seat).length > 0 : game4.toAct === seat);
+      plate.classList.toggle("turn", !!active);
+    }
+  }
+
+  function renderChips4() {
+    el.dockButtons.innerHTML = "";
+    if (busy || !game4 || game4.handOver || game4.gameOver || awaitingEcho) return;
+    const legal = game4.legalActions(room.mySeat).filter((a) => a !== "play");
+    renderChipButtons(legal, localCall4);
+  }
+
+  /* ---------- event presentation (2v2) ---------- */
+
+  function present4(ev) {
+    switch (ev.type) {
+      case "hand-start":
+        enqueue(() => {
+          clearBattle();
+          renderPips4();
+          renderStake4();
+          renderHands4(true);
+          renderPlates4();
+          msg(ev.mano === room.mySeat
+            ? "New hand — you are mano, you lead"
+            : `New hand — ${seatName(ev.mano)} is mano`);
+        }, 700);
+        break;
+
+      case "card-played":
+        enqueue(() => {
+          const slot = PLAYED_ELS[seatPos(ev.seat)]();
+          const c = makeCardEl(ev.card, false);
+          c.classList.add("thrown");
+          slot.appendChild(c);
+          renderHands4(false);
+          renderPlates4();
+        }, 650);
+        break;
+
+      case "turn":
+        enqueue(() => {
+          renderPlates4();
+          msg(ev.seat === room.mySeat ? "Your move" : `${seatName(ev.seat)} is thinking…`);
+        }, 80);
+        break;
+
+      case "trick-end":
+        enqueue(() => {
+          for (let seat = 0; seat < 4; seat++) {
+            const card = PLAYED_ELS[seatPos(seat)]().lastElementChild;
+            if (!card) continue;
+            if (ev.winnerSeat === null) continue;            // parda: no highlight
+            card.classList.add(seat === ev.winnerSeat ? "trick-win" : "trick-lose");
+          }
+          renderPips4();
+          msg(ev.winner === "tie" ? "¡Parda! — tied trick" :
+              ev.winnerSeat === room.mySeat ? "You take the trick" :
+              `${seatName(ev.winnerSeat)} takes the trick`);
+        }, 1300);
+        enqueue(() => clearBattle(), 150);
+        break;
+
+      case "call":
+        enqueue(() => {
+          const text = CALL_TEXT[ev.name] || ev.name;
+          bubbleAt(seatPos(ev.seat), text);
+          if (["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name)) flash(text);
+          const mustAnswer = game4.pending && game4.legalActions(room.mySeat).length;
+          msg(ev.seat === room.mySeat ? "Waiting for an answer…" :
+              mustAnswer ? `${seatName(ev.seat)} calls — your side answers` :
+              `${seatName(ev.seat)} calls…`);
+          renderPlates4();
+        }, ["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name) ? 1400 : 900);
+        break;
+
+      case "response":
+        enqueue(() => {
+          bubbleAt(seatPos(ev.seat), ev.accepted ? "QUIERO" : "NO QUIERO");
+          renderPlates4();
+        }, 900);
+        break;
+
+      case "envido-primero":
+        enqueue(() => msg("¡El envido está primero! Truco is set aside"), 900);
+        break;
+
+      case "envido-result": {
+        // declarations run from the mano; a seat only states its value if it
+        // beats the best so far, otherwise "son buenas"
+        let best = -1;
+        for (let i = 0; i < 4; i++) {
+          const seat = (ev.mano + i) % 4;
+          const v = ev.values[seat];
+          if (v > best) {
+            best = v;
+            enqueue(() => bubbleAt(seatPos(seat), `${v}`), 1000);
+          } else {
+            enqueue(() => bubbleAt(seatPos(seat), "SON BUENAS"), 800);
+          }
+        }
+        enqueue(() => {
+          msg(ev.winnerTeam === myTeam()
+            ? `Your team wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`
+            : `${seatName(ev.winnerSeat)}'s team wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`);
+        }, 1100);
+        break;
+      }
+
+      case "envido-declined":
+        enqueue(() => {
+          msg(ev.callerTeam === myTeam()
+            ? `Declined — your team scores ${ev.points}`
+            : `Declined — ${seatName(ev.callerSeat)}'s team scores ${ev.points}`);
+        }, 1000);
+        break;
+
+      case "stake":
+        enqueue(() => renderStake4(), 100);
+        break;
+
+      case "mazo":
+        enqueue(() => bubbleAt(seatPos(ev.seat), "ME VOY AL MAZO"), 1100);
+        break;
+
+      case "score":
+        enqueue(() => renderScores4(), 350);
+        break;
+
+      case "hand-end":
+        enqueue(() => {
+          const why = ev.reason === "mazo" ? " (fold)" : ev.reason === "no-quiero" ? " (no quiero)" : "";
+          msg(ev.winner === myTeam()
+            ? `Your team wins the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`
+            : `They win the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`);
+        }, 1900);
+        if (!game4.gameOver && room.role === "host") {
+          // host deals the next hand and broadcasts it; guests wait for it
+          enqueue(() => {
+            if (!room || !game4 || game4.gameOver) return;
+            const fixed = Truco4.freshDeal4();
+            game4.nextHand(fixed);
+            Net.broadcast({ t: "deal4", hands: fixed });
+            sync4();
+          }, 0);
+        }
+        break;
+
+      case "game-over":
+        enqueue(() => showEndgame4(ev.winner), 300);
+        break;
+    }
+  }
+
+  /* ---------- flow (2v2) ---------- */
+
+  function sync4() {
+    for (const ev of game4.drainEvents()) present4(ev);
+    if (!busy) onIdle();
+  }
+
+  function clearEcho() {
+    awaitingEcho = false;
+    clearTimeout(echoTimer);
+  }
+
+  function sendIntent(a) {
+    awaitingEcho = true;
+    clearTimeout(echoTimer);
+    echoTimer = setTimeout(() => { awaitingEcho = false; if (!busy) onIdle(); }, 4000);
+    Net.send({ t: "i", a });
+  }
+
+  function localPlay4(index) {
+    if (busy || !game4 || game4.gameOver || awaitingEcho) return;
+    if (room.role === "host") {
+      if (game4.playCard(room.mySeat, index)) {
+        Net.broadcast({ t: "a4", seat: room.mySeat, a: { kind: "play", index } });
+        sync4();
+      }
+    } else if (game4.legalActions(room.mySeat).includes("play")) {
+      sendIntent({ kind: "play", index });
+      renderHands4(false); // lock the hand until the echo lands
+    }
+  }
+
+  function localCall4(name) {
+    if (busy || !game4 || game4.gameOver || awaitingEcho) return;
+    if (room.role === "host") {
+      if (game4.call(room.mySeat, name)) {
+        Net.broadcast({ t: "a4", seat: room.mySeat, a: { kind: "call", name } });
+        sync4();
+      }
+    } else if (game4.legalActions(room.mySeat).includes(name)) {
+      sendIntent({ kind: "call", name });
+      renderChips4();
+    }
+  }
+
+  /* host: apply an action for a seat (own, guest intent, or bot) + replicate */
+  function hostApply(seat, a) {
+    if (!game4 || game4.gameOver) return false;
+    const ok = a.kind === "play" ? game4.playCard(seat, a.index) : game4.call(seat, a.name);
+    if (ok) {
+      Net.broadcast({ t: "a4", seat, a });
+      sync4();
+    }
+    return ok; // a stale/raced intent simply loses — state already moved on
+  }
+
+  /* guest: apply the host's authoritative broadcast */
+  function applyAct4(seat, a) {
+    if (!game4 || game4.gameOver) return;
+    clearEcho();
+    const ok = a.kind === "play" ? game4.playCard(seat, a.index) : game4.call(seat, a.name);
+    if (!ok) {
+      netEnded4("CONNECTION LOST", "The game fell out of sync with the table.");
+      return;
+    }
+    sync4();
+  }
+
+  function applyDeal4(hands) {
+    clearEcho();
+    game4.nextHand(hands);
+    sync4();
+  }
+
+  function onIdle4() {
+    if (!game4 || game4.gameOver) return;
+
+    if (room.role !== "host" && pendingDeal4) {
+      const hands = pendingDeal4;
+      pendingDeal4 = null;
+      applyDeal4(hands);
+      return;
+    }
+
+    renderHands4(false);
+    renderChips4();
+    renderScores4();
+    renderPlates4();
+
+    if (room.role !== "host") return; // guests act through the host
+
+    // drive bot seats (one decision at a time)
+    const seat = botToAct();
+    if (seat !== null && !aiThinking) {
+      aiThinking = true;
+      botTimer = setTimeout(() => {
+        aiThinking = false;
+        if (busy || !game4 || game4.gameOver || game4.handOver) return;
+        const s = botToAct();
+        if (s === null) return;
+        const d = TrucoAI4.decide(game4, s);
+        if (!d) return;
+        hostApply(s, d.action === "play" ? { kind: "play", index: d.index } : { kind: "call", name: d.action });
+      }, 850 + Math.random() * 700);
+    }
+  }
+
+  /* which bot seat should act now? humans answer calls when they can */
+  function botToAct() {
+    if (game4.handOver || game4.gameOver) return null;
+    if (game4.pending) {
+      const t = 1 - game4.pending.callerTeam;
+      const seats = [t, t + 2];
+      if (seats.some(seatIsHuman)) return null;  // a human teammate will answer
+      // both responders are bots: the one farther from mano (the pie) speaks
+      const byDepth = seats.sort((a, b) => ((b - game4.mano + 4) % 4) - ((a - game4.mano + 4) % 4));
+      return byDepth[0];
+    }
+    return seatIsHuman(game4.toAct) ? null : game4.toAct;
+  }
+
+  function showEndgame4(winnerTeam) {
+    const div = document.createElement("div");
+    div.className = "endgame";
+    const mates = [winnerTeam, winnerTeam + 2]
+      .map((s) => (s === room.mySeat ? "YOU" : esc(room.seats[s].name.toUpperCase())));
+    const title = winnerTeam === myTeam() ? "YOUR TEAM WINS" : `${mates.join(" & ")} WIN`;
+    div.innerHTML = `
+      <div class="endgame-inner">
+        <div class="endgame-title">${title}</div>
+        <div class="endgame-sub">${game4.scores[myTeam()]} — ${game4.scores[1 - myTeam()]}</div>
+        <button class="btn btn-gold" id="btn-again">PLAY AGAIN</button>
+      </div>`;
+    document.body.appendChild(div);
+    const btn = div.querySelector("#btn-again");
+    btn.addEventListener("click", () => {
+      if (room.role === "host") { div.remove(); hostBegin4(); }
+      else {
+        Net.send({ t: "again" });
+        btn.disabled = true;
+        btn.textContent = "WAITING FOR HOST…";
+      }
+    });
+  }
+
+  /* ---------- 2v2 room lifecycle ---------- */
+
+  function publicSeats() {
+    return room.seats.map((s) => ({ kind: s.kind, name: s.name }));
+  }
+
+  function openTable4() {
+    room = {
+      role: "host", code: null, mySeat: 0, started: false,
+      seats: [
+        { kind: "human", name: myName(), connId: null },
+        { kind: "open", name: "", connId: null },
+        { kind: "open", name: "", connId: null },
+        { kind: "open", name: "", connId: null },
+      ],
+    };
+    showOverlay("YOUR 2v2 TABLE", "Summoning a table…");
+    Net.hostRoom({
+      onReady: (code) => {
+        room.code = code;
+        const url = location.origin + location.pathname + "#join4=" + code;
+        showLobbyHost(url);
+      },
+      onPeerJoin: () => { /* wait for their hello */ },
+      onPeerMessage: hostPeerMsg,
+      onPeerLeave: (id) => hostPeerLeft(id),
+      onError: netError4,
+    });
+  }
+
+  function hostPeerMsg(id, m) {
+    if (!m || typeof m !== "object" || !room) return;
+    const seat = room.seats.findIndex((s) => s.connId === id);
+    switch (m.t) {
+      case "hello": {
+        if (seat !== -1) return;                       // already seated
+        const free = room.started ? -1 : room.seats.findIndex((s) => s.kind === "open");
+        if (free === -1) {
+          Net.sendToPeer(id, { t: "full" });
+          setTimeout(() => Net.closePeer(id), 400);
+          return;
+        }
+        room.seats[free] = { kind: "human", name: cleanName(m.name), connId: id };
+        broadcastRoster();
+        renderLobbyHost();
+        chatSys(`${room.seats[free].name} joined the table`);
+        break;
+      }
+      case "i":
+        if (seat !== -1 && room.started) hostApply(seat, m.a);
+        break;
+      case "chat":
+        if (seat !== -1) {
+          const name = room.seats[seat].name;
+          const text = String(m.text || "").slice(0, 160);
+          addChat(name, text, false);
+          Net.broadcast({ t: "chat", name, text }, id);
+        }
+        break;
+      case "again":
+        if (seat !== -1 && game4 && game4.gameOver) {
+          document.querySelector(".endgame")?.remove();
+          hostBegin4();
+        }
+        break;
+      case "bye":
+        Net.closePeer(seat !== -1 ? room.seats[seat].connId : id);
+        if (seat !== -1) hostSeatLost(seat);
+        break;
+    }
+  }
+
+  function hostPeerLeft(id) {
+    if (!room) return;
+    const seat = room.seats.findIndex((s) => s.connId === id);
+    if (seat !== -1) hostSeatLost(seat);
+  }
+
+  function hostSeatLost(seat) {
+    const name = room.seats[seat].name;
+    if (!room.started) {
+      room.seats[seat] = { kind: "open", name: "", connId: null };
+      broadcastRoster();
+      renderLobbyHost();
+      chatSys(`${name} left the table`);
+      return;
+    }
+    // mid-game: a bot takes over the seat so the table plays on
+    room.seats[seat] = { kind: "bot", name: pickBotName(), connId: null };
+    Net.broadcast({ t: "seatbot", seat, name: room.seats[seat].name });
+    chatSys(`${name} left — ${room.seats[seat].name} takes over`);
+    renderPlates4();
+    if (!busy) onIdle();
+  }
+
+  function pickBotName() {
+    const used = room.seats.map((s) => s.name);
+    return BOT_NAMES.find((n) => !used.includes(n)) || "BOT";
+  }
+
+  function broadcastRoster() {
+    for (const [seat, s] of room.seats.entries()) {
+      if (s.connId !== null) {
+        Net.sendToPeer(s.connId, { t: "roster", seats: publicSeats(), yourSeat: seat });
+      }
+    }
+  }
+
+  function hostBegin4() {
+    room.started = true;
+    const fixed = Truco4.freshDeal4();
+    const mano = Math.floor(Math.random() * 4);
+    for (const [seat, s] of room.seats.entries()) {
+      if (s.connId !== null) {
+        Net.sendToPeer(s.connId, { t: "start4", mano, hands: fixed, seats: publicSeats(), yourSeat: seat });
+      }
+    }
+    beginNet4(mano, fixed);
+  }
+
+  function beginNet4(mano, hands) {
+    document.querySelector(".endgame")?.remove();
+    game = null;
+    net = null;
+    pendingDeal4 = null;
+    clearEcho();
+    game4 = new Truco4.Game4(mano, hands);
+    queue = [];
+    busy = false;
+    aiThinking = false;
+    enterStage();
+    el.stage.classList.add("mode-2v2");
+    el.handLeft.classList.remove("hidden");
+    el.handRight.classList.remove("hidden");
+    el.playedLeft.classList.remove("hidden");
+    el.playedRight.classList.remove("hidden");
+    for (const p of [el.plateTop, el.plateLeft, el.plateRight, el.plateYou]) p.classList.remove("hidden");
+    el.labelYou.textContent = "US";
+    el.labelOpp.textContent = "THEM";
+    el.btnChat.classList.remove("hidden");
+    renderScores4();
+    renderPlates4();
+    sync4();
+  }
+
+  /* guest side */
+
+  function joinTable4(code) {
+    if (!Net.available()) {
+      showNotice("PLAY ONLINE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+      return;
+    }
+    saveName();
+    showOverlay("JOINING TABLE", "Crossing the gold sea…");
+    room = { role: "guest", code, mySeat: null, seats: null, started: false };
+    Net.join(code, {
+      onConnect: () => {
+        Net.send({ t: "hello", name: myName() });
+        showOverlay("JOINING TABLE", "Connected — waiting for a seat…");
+      },
+      onMessage: guestMsg4,
+      onClose: () => netEnded4("TABLE CLOSED", "The connection to the table was lost."),
+      onError: netError4,
+    });
+  }
+
+  function guestMsg4(m) {
+    if (!m || typeof m !== "object" || !room) return;
+    switch (m.t) {
+      case "roster":
+        room.seats = m.seats.map((s) => ({ ...s, connId: null }));
+        room.mySeat = m.yourSeat;
+        if (!game4) renderLobbyGuest();
+        break;
+      case "start4":
+        room.seats = m.seats.map((s) => ({ ...s, connId: null }));
+        room.mySeat = m.yourSeat;
+        room.started = true;
+        beginNet4(m.mano, m.hands);
+        break;
+      case "deal4":
+        if (!game4) return;
+        if (busy || queue.length) pendingDeal4 = m.hands;
+        else applyDeal4(m.hands);
+        break;
+      case "a4":
+        applyAct4(m.seat, m.a);
+        break;
+      case "seatbot":
+        if (room.seats) {
+          const old = room.seats[m.seat].name;
+          room.seats[m.seat] = { kind: "bot", name: cleanName(m.name), connId: null };
+          chatSys(`${old} left — ${room.seats[m.seat].name} takes over`);
+          if (game4) renderPlates4();
+          else renderLobbyGuest();
+        }
+        break;
+      case "chat":
+        addChat(cleanName(m.name), String(m.text || "").slice(0, 160), false);
+        break;
+      case "full":
+        room = null;
+        lobbyFailed("That table is full or the game already started. Ask for a fresh link.");
+        break;
+      case "bye":
+        netEnded4("TABLE CLOSED", "The host closed the table.");
+        break;
+    }
+  }
+
+  /* leaving / errors (2v2) */
+
+  function leaveNet4() {
+    if (!room) return;
+    if (room.role === "host") Net.broadcast({ t: "bye" });
+    else Net.send({ t: "bye" });
+    room = null;
+    game4 = null;
+    clearTimeout(botTimer);
+    clearEcho();
+    Net.destroy();
+  }
+
+  function netEnded4(title, text) {
+    if (!room) return;
+    room = null;
+    game4 = null;
+    clearTimeout(botTimer);
+    clearEcho();
+    Net.destroy();
+    exitToSplash();
+    showNotice(title, text);
+  }
+
+  function netError4(e) {
+    const t = e && e.type;
+    if (t === "peer-unavailable") {
+      room = null;
+      lobbyFailed("Table not found — it may have closed. Ask for a fresh link.");
+    } else if (t === "timeout") {
+      room = null;
+      lobbyFailed("Couldn't reach the table — a network may be blocking the connection. Try again or switch networks.");
+    } else if (room && (game4 || room.started)) {
+      netEnded4("CONNECTION LOST", "The connection to the table was lost.");
+    } else if (room && room.role === "host" && Net.roomSize() > 0) {
+      /* broker hiccup after guests connected — ignore, WebRTC links live on */
+    } else {
+      room = null;
+      lobbyFailed("Can't reach the matchmaking server — check your connection and try again.");
+    }
+  }
+
+  /* ---------- lobby rendering ---------- */
+
+  function lobbySeatRow(seat, s, isHost) {
+    const row = document.createElement("div");
+    row.className = "lobby-seat " + (s.kind === "open" ? "empty" : "filled");
+    const team = document.createElement("span");
+    team.className = `lobby-team team-${seat % 2}`;
+    team.textContent = seat % 2 === 0 ? "TEAM GOLD" : "TEAM BLUE";
+    const name = document.createElement("span");
+    name.className = "lobby-name";
+    if (s.kind === "open") {
+      name.textContent = "Waiting for a player…";
+    } else {
+      name.textContent = s.name;
+      const tag = document.createElement("span");
+      tag.className = "lobby-tag";
+      tag.textContent =
+        s.kind === "bot" ? "  · BOT" :
+        (room && seat === room.mySeat) ? "  · YOU" :
+        (isHost && seat === 0) ? "  · HOST" : "";
+      if (!isHost && seat === 0) tag.textContent = "  · HOST";
+      name.appendChild(tag);
+    }
+    row.appendChild(team);
+    row.appendChild(name);
+    if (isHost && s.kind === "open") {
+      const add = document.createElement("button");
+      add.className = "lobby-btn";
+      add.textContent = "+ ADD BOT";
+      add.addEventListener("click", () => {
+        room.seats[seat] = { kind: "bot", name: pickBotName(), connId: null };
+        broadcastRoster();
+        renderLobbyHost();
+      });
+      row.appendChild(add);
+    }
+    if (isHost && s.kind === "bot") {
+      const rm = document.createElement("button");
+      rm.className = "lobby-btn lobby-btn-remove";
+      rm.textContent = "REMOVE";
+      rm.addEventListener("click", () => {
+        room.seats[seat] = { kind: "open", name: "", connId: null };
+        broadcastRoster();
+        renderLobbyHost();
+      });
+      row.appendChild(rm);
+    }
+    return row;
+  }
+
+  function renderRoster(isHost) {
+    el.lobbyRoster.innerHTML = "";
+    for (const [seat, s] of room.seats.entries()) {
+      el.lobbyRoster.appendChild(lobbySeatRow(seat, s, isHost));
+    }
+    el.lobbyRoster.classList.remove("hidden");
+  }
+
+  function showLobbyHost(url) {
+    showOverlay("YOUR 2v2 TABLE", "Share the link — friends take seats as they arrive.", { link: url });
+    renderLobbyHost();
+  }
+
+  function renderLobbyHost() {
+    if (!room || room.role !== "host" || room.started) return;
+    renderRoster(true);
+    const ready = room.seats.every((s) => s.kind !== "open");
+    el.btnStart2v2.classList.remove("hidden");
+    el.btnStart2v2.disabled = !ready;
+    el.btnStart2v2.textContent = ready ? "START GAME" : "FILL ALL 4 SEATS TO START";
+    el.btnLobbyChat.classList.toggle("hidden", Net.roomSize() === 0);
+    el.onlineStatus.textContent = ready
+      ? "Table full — deal the cards!"
+      : "Share the link — friends take seats as they arrive. Short a player? Add a bot.";
+  }
+
+  function renderLobbyGuest() {
+    showOverlay("AT THE TABLE", "Waiting for the host to start the game…");
+    renderRoster(false);
+    el.btnLobbyChat.classList.remove("hidden");
+  }
+
+  /* ---------- chat ---------- */
+
+  function chatAvailable() { return !!(net || room); }
+
+  function addChat(who, text, mine, sys = false) {
+    const div = document.createElement("div");
+    div.className = "chat-msg" + (mine ? " chat-mine" : "") + (sys ? " chat-sys" : "");
+    if (!sys) {
+      const w = document.createElement("span");
+      w.className = "chat-who";
+      w.textContent = who;
+      div.appendChild(w);
+    }
+    div.appendChild(document.createTextNode(text));
+    el.chatLog.appendChild(div);
+    el.chatLog.scrollTop = el.chatLog.scrollHeight;
+    while (el.chatLog.children.length > 120) el.chatLog.firstChild.remove();
+    if (el.chatPanel.classList.contains("hidden") && !mine) {
+      unreadChat++;
+      el.chatBadge.textContent = unreadChat > 9 ? "9+" : unreadChat;
+      el.chatBadge.classList.remove("hidden");
+    }
+  }
+
+  function chatSys(text) { addChat(null, text, false, true); }
+
+  function openChat() {
+    el.chatPanel.classList.remove("hidden");
+    unreadChat = 0;
+    el.chatBadge.classList.add("hidden");
+    el.chatLog.scrollTop = el.chatLog.scrollHeight;
+  }
+
+  function closeChat() { el.chatPanel.classList.add("hidden"); }
+
+  function sendChat(text) {
+    text = text.trim().slice(0, 160);
+    if (!text || !chatAvailable()) return;
+    addChat(myName(), text, true);
+    if (room && room.role === "host") Net.broadcast({ t: "chat", name: room.seats[0].name, text });
+    else Net.send({ t: "chat", name: myName(), text });
+  }
+
+  function resetChat() {
+    el.chatLog.innerHTML = "";
+    unreadChat = 0;
+    el.chatBadge.classList.add("hidden");
+    closeChat();
+    el.btnChat.classList.add("hidden");
+  }
+
+  /* ---------- stage transitions ---------- */
+
   function enterStage() {
     el.onlineOverlay.classList.add("hidden");
     el.splash.classList.add("gone");
     el.stage.classList.remove("hidden");
-    el.labelOpp.textContent = net ? "RIVAL" : "EL MONOLITO";
+    if (!game4) {
+      el.labelYou.textContent = "YOU";
+      el.labelOpp.textContent = net ? (rivalName || "RIVAL").toUpperCase() : "EL MONOLITO";
+      el.btnChat.classList.toggle("hidden", !net);
+    }
     if (location.hash.startsWith("#join")) {
       history.replaceState(null, "", location.pathname + location.search);
     }
@@ -398,6 +1218,8 @@
 
   function newGame() {
     leaveNet();
+    leaveNet4();
+    resetChat();
     game = new Truco.Game();
     queue = [];
     busy = false;
@@ -407,29 +1229,41 @@
 
   function exitToSplash() {
     game = null;
+    game4 = null;
     queue = [];
     busy = false;
     aiThinking = false;
     pendingDeal = null;
-    clearTimeout(bubbleTimers.you);
-    clearTimeout(bubbleTimers.ai);
-    el.bubbleYou.classList.add("hidden");
-    el.bubbleAi.classList.add("hidden");
+    pendingDeal4 = null;
+    clearEcho();
+    clearTimeout(botTimer);
+    for (const k of Object.keys(bubbleTimers)) clearTimeout(bubbleTimers[k]);
+    for (const b of [el.bubbleYou, el.bubbleAi, el.bubbleLeft, el.bubbleRight]) b.classList.add("hidden");
     el.callflash.classList.add("hidden");
     clearBattle();
     el.handYou.innerHTML = "";
     el.handAi.innerHTML = "";
+    el.handLeft.innerHTML = "";
+    el.handRight.innerHTML = "";
     el.dockButtons.innerHTML = "";
     msg(" ");
     document.querySelector(".endgame")?.remove();
     el.stage.classList.add("hidden");
+    el.stage.classList.remove("mode-2v2");
+    el.handLeft.classList.add("hidden");
+    el.handRight.classList.add("hidden");
+    el.playedLeft.classList.add("hidden");
+    el.playedRight.classList.add("hidden");
+    for (const p of [el.plateTop, el.plateLeft, el.plateRight, el.plateYou]) p.classList.add("hidden");
+    resetChat();
     el.splash.classList.remove("gone");
   }
 
-  /* ---------- online play ---------- */
+  /* ---------- online play (1v1) ---------- */
 
   function beginNet(role, manoSeat, hands) {
     net = { role };
+    game4 = null;
     pendingDeal = null;
     game = new Truco.Game(manoSeat, hands);
     queue = [];
@@ -471,6 +1305,10 @@
   function netMsg(m) {
     if (!m || typeof m !== "object") return;
     switch (m.t) {
+      case "hello":
+        rivalName = cleanName(m.name);
+        if (net) el.labelOpp.textContent = rivalName.toUpperCase();
+        break;
       case "start": // first game, or a host-initiated rematch
         document.querySelector(".endgame")?.remove();
         beginNet("guest", m.mano === "guest" ? "you" : "ai",
@@ -483,6 +1321,9 @@
         break;
       case "act":
         if (net && game) applyRemote(m.a);
+        break;
+      case "chat":
+        addChat(cleanName(m.name), String(m.text || "").slice(0, 160), false);
         break;
       case "again":
         if (net && net.role === "host" && game && game.gameOver) {
@@ -501,6 +1342,7 @@
     if (!net) return;
     Net.send({ t: "bye" });
     net = null;
+    rivalName = null;
     Net.destroy();
   }
 
@@ -508,6 +1350,7 @@
   function netEnded(title, text) {
     if (!net) return;
     net = null;
+    rivalName = null;
     Net.destroy();
     exitToSplash();
     showNotice(title, text);
@@ -518,6 +1361,12 @@
   function showOverlay(title, status, { link = null, hint = false, cancelLabel = "CANCEL" } = {}) {
     el.onlineTitle.textContent = title;
     el.onlineStatus.textContent = status;
+    el.onlineNamebox.classList.add("hidden");
+    el.onlineModes.classList.add("hidden");
+    el.lobbyRoster.classList.add("hidden");
+    el.btnStart2v2.classList.add("hidden");
+    el.btnJoin2v2.classList.add("hidden");
+    el.btnLobbyChat.classList.add("hidden");
     el.onlineLinkbox.classList.toggle("hidden", !link);
     el.onlineHint.classList.toggle("hidden", !hint);
     el.btnOnlineCancel.textContent = cancelLabel;
@@ -535,7 +1384,11 @@
 
   function closeOverlay() {
     el.onlineOverlay.classList.add("hidden");
-    if (!net) Net.destroy(); // abandon a half-open lobby
+    if (!net && !game4) {
+      if (room) { leaveNet4(); }      // abandon a half-open 2v2 lobby
+      Net.destroy();                  // abandon a half-open 1v1 lobby
+      resetChat();
+    }
     if (location.hash.startsWith("#join")) {
       history.replaceState(null, "", location.pathname + location.search);
     }
@@ -559,18 +1412,35 @@
     }
   }
 
-  function openTable() {
+  /* the online menu: name + mode choice */
+  function openOnlineMenu() {
     if (!Net.available()) {
       showNotice("PLAY ONLINE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
       return;
     }
+    showOverlay("PLAY ONLINE", "Pick your table — 1v1 duel or 2v2 with partners.");
+    el.onlineName.value = localStorage.getItem("monolito-name") || "";
+    el.onlineNamebox.classList.remove("hidden");
+    el.onlineModes.classList.remove("hidden");
+  }
+
+  function saveName() {
+    const n = cleanName(el.onlineName.value);
+    if (n !== "Player" || el.onlineName.value.trim()) localStorage.setItem("monolito-name", n);
+  }
+
+  function openTable() {
+    saveName();
     showOverlay("PLAY ONLINE", "Summoning a table…");
     Net.host({
       onReady: (code) => {
         const url = location.origin + location.pathname + "#join=" + code;
         showOverlay("YOUR TABLE IS READY", "Waiting for your rival to arrive…", { link: url, hint: true });
       },
-      onConnect: () => hostBegin(),
+      onConnect: () => {
+        Net.send({ t: "hello", name: myName() });
+        hostBegin();
+      },
       onMessage: netMsg,
       onClose: () => netEnded("RIVAL LEFT", "Your rival left the table."),
       onError: netError,
@@ -584,11 +1454,23 @@
     }
     showOverlay("JOINING TABLE", "Crossing the gold sea…");
     Net.join(code, {
-      onConnect: () => showOverlay("JOINING TABLE", "Connected — waiting for the deal…"),
+      onConnect: () => {
+        Net.send({ t: "hello", name: myName() });
+        showOverlay("JOINING TABLE", "Connected — waiting for the deal…");
+      },
       onMessage: netMsg,
       onClose: () => netEnded("RIVAL LEFT", "Your rival left the table."),
       onError: netError,
     });
+  }
+
+  /* a #join4 link: ask for a name before sitting down */
+  function openJoin4Prompt(code) {
+    showOverlay("JOIN 2v2 TABLE", "You're invited — pick a name and take a seat.");
+    el.onlineName.value = localStorage.getItem("monolito-name") || "";
+    el.onlineNamebox.classList.remove("hidden");
+    el.btnJoin2v2.classList.remove("hidden");
+    el.btnJoin2v2.onclick = () => joinTable4(code);
   }
 
   /* ---------- rules overlay ---------- */
@@ -609,7 +1491,9 @@
     <h3>Me voy al mazo</h3>
     <p>Fold your hand and concede the current stake. In the first trick before envido it costs 2 points.</p>
     <h3>Play Online</h3>
-    <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table and gives you a link. Send it to a friend — the moment they open it, the cards fly. First to 30, no AI, no mercy.</p>`;
+    <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table and gives you a link — <strong>1v1</strong> or <strong>2v2</strong>. Send it to your friends; the cards fly when everyone is seated. There's a table-talk chat, and empty 2v2 seats can be filled with bots.</p>
+    <h3>2v2 Team Rules</h3>
+    <p>Seats alternate teams; your partner sits across the table. The highest card wins the trick for its <strong>team</strong> — if the top cards split between teams it's a parda. Envido is declared from the mano around the table (ties favor whoever is closer to mano), and either member of a team may answer the other side's calls. Folding concedes for your whole team.</p>`;
 
   /* ---------- boot ---------- */
 
@@ -618,7 +1502,15 @@
     newGame();
   });
 
-  el.btnOnline.addEventListener("click", openTable);
+  el.btnOnline.addEventListener("click", openOnlineMenu);
+  el.btnMode1v1.addEventListener("click", openTable);
+  el.btnMode2v2.addEventListener("click", () => { saveName(); openTable4(); });
+  el.btnStart2v2.addEventListener("click", () => {
+    if (room && room.role === "host" && !room.started &&
+        room.seats.every((s) => s.kind !== "open")) {
+      hostBegin4();
+    }
+  });
   el.btnOnlineCancel.addEventListener("click", closeOverlay);
 
   el.btnCopyLink.addEventListener("click", async () => {
@@ -643,10 +1535,29 @@
 
   el.btnRules.addEventListener("click", () => el.rulesOverlay.classList.remove("hidden"));
   el.btnCloseRules.addEventListener("click", () => el.rulesOverlay.classList.add("hidden"));
-  el.btnExit.addEventListener("click", () => { leaveNet(); exitToSplash(); });
+  el.btnExit.addEventListener("click", () => {
+    leaveNet();
+    leaveNet4();
+    exitToSplash();
+  });
 
-  // deep links: #join=<code> joins a table, #play goes straight to solo
+  el.btnChat.addEventListener("click", () => {
+    if (el.chatPanel.classList.contains("hidden")) openChat();
+    else closeChat();
+  });
+  el.btnLobbyChat.addEventListener("click", openChat);
+  el.btnChatClose.addEventListener("click", closeChat);
+  el.chatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    sendChat(el.chatInput.value);
+    el.chatInput.value = "";
+  });
+
+  // deep links: #join=<code> joins 1v1, #join4=<code> joins a 2v2 table,
+  // #play goes straight to solo
+  const join4Match = location.hash.match(/^#join4=([a-z0-9]+)$/i);
   const joinMatch = location.hash.match(/^#join=([a-z0-9]+)$/i);
-  if (joinMatch) joinTable(joinMatch[1].toLowerCase());
+  if (join4Match) openJoin4Prompt(join4Match[1].toLowerCase());
+  else if (joinMatch) joinTable(joinMatch[1].toLowerCase());
   else if (location.hash === "#play") el.btnStart.click();
 })();

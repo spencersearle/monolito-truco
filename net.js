@@ -1,19 +1,23 @@
 /* ============================================================
    MONOLITO · net.js
-   PeerJS transport for 1v1 online play. The host's browser and
-   the guest's browser each run a full engine in lockstep: the
-   host deals (and broadcasts the hands), every action is applied
-   locally then replicated to the other side. This file only
-   moves messages — game logic stays in engine.js / ui.js.
+   PeerJS transport for online play. 1v1 uses a single host↔guest
+   connection; 2v2 uses a star: the host holds up to three guest
+   connections and relays/orders everything (room mode). Both
+   modes are lockstep — every browser runs a full engine, the
+   host deals and broadcasts, actions are replicated. This file
+   only moves messages — game logic stays in the engines / ui.js.
    ============================================================ */
 
 const Net = (() => {
   const PREFIX = "monolito-truco-";
   const CONNECT_TIMEOUT = 15000;
+  const ROOM_CAPACITY = 3;       // guests; host makes 4
 
   let peer = null;
   let conn = null;
   let timeoutId = null;
+  let room = null;               // host 2v2: Map connId -> conn
+  let nextConnId = 1;
 
   function available() {
     return typeof Peer !== "undefined";
@@ -68,6 +72,57 @@ const Net = (() => {
     peer.on("error", (e) => cb.onError(e));
   }
 
+  /* ---------- 2v2 room: host holds up to 3 guest connections ---------- */
+
+  function hostRoom(cb) {
+    const code = randomCode();
+    room = new Map();
+    nextConnId = 1;
+    peer = new Peer(PREFIX + code);
+    timeoutId = setTimeout(() => cb.onError({ type: "broker-timeout" }), CONNECT_TIMEOUT);
+    peer.on("open", () => {
+      clearTimeout(timeoutId);
+      cb.onReady(code);
+    });
+    peer.on("connection", (c) => {
+      if (!room || room.size >= ROOM_CAPACITY) {
+        c.on("open", () => { c.send({ t: "full" }); setTimeout(() => c.close(), 400); });
+        return;
+      }
+      const id = nextConnId++;
+      room.set(id, c);
+      c.on("open", () => cb.onPeerJoin(id));
+      c.on("data", (d) => cb.onPeerMessage(id, d));
+      c.on("close", () => { if (room && room.delete(id)) cb.onPeerLeave(id); });
+      c.on("error", () => { if (room && room.delete(id)) cb.onPeerLeave(id); });
+    });
+    peer.on("error", (e) => cb.onError(e));
+    peer.on("disconnected", () => peer && peer.reconnect());
+  }
+
+  function sendToPeer(id, msg) {
+    const c = room && room.get(id);
+    if (c && c.open) c.send(msg);
+  }
+
+  function broadcast(msg, exceptId = null) {
+    if (!room) return;
+    for (const [id, c] of room) {
+      if (id !== exceptId && c.open) c.send(msg);
+    }
+  }
+
+  function closePeer(id) {
+    const c = room && room.get(id);
+    if (!c) return;
+    room.delete(id);
+    try { c.close(); } catch (e) { /* already gone */ }
+  }
+
+  function roomSize() {
+    return room ? room.size : 0;
+  }
+
   function send(msg) {
     if (conn && conn.open) conn.send(msg);
   }
@@ -79,10 +134,15 @@ const Net = (() => {
   function destroy() {
     clearTimeout(timeoutId);
     try { if (conn) conn.close(); } catch (e) { /* already gone */ }
+    if (room) for (const c of room.values()) { try { c.close(); } catch (e) { /* already gone */ } }
     try { if (peer) peer.destroy(); } catch (e) { /* already gone */ }
     conn = null;
     peer = null;
+    room = null;
   }
 
-  return { available, host, join, send, connected, destroy };
+  return {
+    available, host, join, send, connected, destroy,
+    hostRoom, sendToPeer, broadcast, closePeer, roomSize,
+  };
 })();
