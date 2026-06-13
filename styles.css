@@ -348,6 +348,9 @@ body {
 
 .online-name:focus { border-color: var(--gold-bright); box-shadow: 0 0 18px rgba(242, 201, 76, .25); }
 
+/* the paste-a-link input holds a full URL — smaller, denser type */
+#join-link { font-size: .82rem; letter-spacing: .02em; }
+
 .online-modes {
   display: flex;
   gap: 12px;
@@ -1141,6 +1144,82 @@ body {
   flex-shrink: 0;
 }
 
+/* lobby buttons that carry an unread badge */
+.btn-badged { position: relative; }
+
+/* incoming-message toast: pops in under the chat icon while the panel is closed */
+.chat-toast {
+  position: fixed;
+  top: 56px;
+  right: 14px;
+  z-index: 75;
+  max-width: min(300px, calc(100vw - 28px));
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 160, 42, .55);
+  background: linear-gradient(170deg, rgba(18, 48, 110, .94), rgba(10, 26, 58, .97));
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .55);
+  font-family: var(--font-hud);
+  font-size: .9rem;
+  line-height: 1.35;
+  color: rgba(245, 234, 209, .95);
+  overflow-wrap: break-word;
+  cursor: pointer;
+  animation: toast-in .25s ease both;
+}
+
+.chat-toast-who {
+  display: block;
+  font-weight: 700;
+  letter-spacing: .06em;
+  font-size: .78rem;
+  color: var(--ice);
+}
+
+.chat-toast.chat-toast-sys { font-style: italic; color: rgba(156, 196, 255, .8); }
+.chat-toast.chat-toast-sys .chat-toast-who { display: none; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- edit-name popover ---------- */
+
+.name-pop {
+  position: fixed;
+  top: 56px;
+  right: 14px;
+  z-index: 80;
+  width: min(280px, calc(100vw - 28px));
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 160, 42, .5);
+  background: linear-gradient(170deg, rgba(18, 48, 110, .94), rgba(10, 26, 58, .97));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .6);
+  animation: toast-in .2s ease both;
+}
+
+.name-pop .online-namelabel { display: block; margin-bottom: 8px; }
+
+.name-pop-row { display: flex; gap: 8px; }
+
+.name-pop-row .online-name { flex: 1; min-width: 0; width: auto; }
+
+.name-save {
+  border: 1px solid var(--gold-bright);
+  background: linear-gradient(160deg, var(--gold-bright), var(--gold));
+  color: var(--abyss);
+  border-radius: 999px;
+  padding: 0 16px;
+  cursor: pointer;
+  font-family: var(--font-hud);
+  font-weight: 700;
+  letter-spacing: .12em;
+  font-size: .74rem;
+  flex-shrink: 0;
+}
+
 /* ---------- end banner ---------- */
 
 .endgame {
@@ -1259,6 +1338,8 @@ body {
     padding: 3px 9px;
     font-size: .85rem;
   }
+  .name-toggle { right: 118px; }
+  .chat-toast, .name-pop { top: calc(44px + env(safe-area-inset-top)); right: 8px; }
 
   .endgame-sub { margin-bottom: 24px; }
   .endgame .btn { display: block; margin: 10px auto; width: min(260px, 82vw); }
@@ -1315,6 +1396,7 @@ body {
   .plate-you { bottom: calc(2px + var(--card-h) + 4px); }
   .chat { height: min(280px, 80vh); }
   .chat-toggle { padding: 3px 8px; font-size: .8rem; }
+  .chat-toast, .name-pop { top: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

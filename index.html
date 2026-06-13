@@ -60,6 +60,7 @@
       <p class="splash-tag">Envido · Truco · Vale Cuatro — first to 30</p>
       <button class="btn btn-gold" id="btn-start">DEAL ME IN</button>
       <button class="btn btn-online" id="btn-online">⟡ PLAY ONLINE</button>
+      <button class="btn btn-online" id="btn-join-game">⇥ JOIN GAME</button>
       <button class="btn btn-ghost" id="btn-rules">HOW TO PLAY</button>
     </div>
   </div>
@@ -87,6 +88,11 @@
         <button class="btn btn-gold" id="btn-mode-1v1">1 VS 1</button>
         <button class="btn btn-gold" id="btn-mode-2v2">2 VS 2</button>
       </div>
+      <div class="online-namebox hidden" id="online-joinbox">
+        <label class="online-namelabel" for="join-link">PASTE THE INVITE LINK</label>
+        <input class="online-name" id="join-link" autocomplete="off"
+               spellcheck="false" placeholder="…#join4=abc123">
+      </div>
       <div class="online-linkbox hidden" id="online-linkbox">
         <input class="online-link" id="online-link" readonly aria-label="Invite link">
         <div class="online-linkbtns">
@@ -97,8 +103,10 @@
       <div class="lobby-roster hidden" id="lobby-roster"></div>
       <p class="online-hint hidden" id="online-hint">Send this link to your rival — the cards fly the moment they open it.</p>
       <button class="btn btn-gold hidden" id="btn-start-2v2" disabled>START GAME</button>
+      <button class="btn btn-gold hidden" id="btn-join-go">JOIN TABLE</button>
       <button class="btn btn-ghost hidden" id="btn-join-2v2">JOIN TABLE</button>
-      <button class="btn btn-ghost hidden" id="btn-lobby-chat">💬 TABLE TALK</button>
+      <button class="btn btn-ghost btn-badged hidden" id="btn-lobby-chat">💬 TABLE TALK<span class="chat-badge hidden" id="lobby-chat-badge">0</span></button>
+      <button class="btn btn-ghost hidden" id="btn-lobby-name">✎ EDIT NAME</button>
       <button class="btn btn-ghost" id="btn-online-cancel">CANCEL</button>
     </div>
   </div>
@@ -121,6 +129,7 @@
         <span class="hud-points" id="points-ai">0</span>
         <div class="hud-track"><div class="hud-fill" id="fill-ai"></div><div class="hud-mid"></div></div>
       </div>
+      <button class="chat-toggle name-toggle hidden" id="btn-name" title="Edit your name">✎</button>
       <button class="chat-toggle hidden" id="btn-chat" title="Chat">💬<span class="chat-badge hidden" id="chat-badge">0</span></button>
       <button class="exit-btn" id="btn-exit" title="Leave the table">✕ EXIT</button>
     </header>
@@ -177,6 +186,22 @@
       <div class="dock-buttons" id="dock-buttons"></div>
     </footer>
   </main>
+
+  <!-- Incoming-message toast (shown while the chat panel is closed) -->
+  <div class="chat-toast hidden" id="chat-toast" role="status">
+    <span class="chat-toast-who" id="chat-toast-who"></span>
+    <span class="chat-toast-text" id="chat-toast-text"></span>
+  </div>
+
+  <!-- Edit your name (online play: lobby + in-game) -->
+  <aside class="name-pop hidden" id="name-panel">
+    <label class="online-namelabel" for="name-input">YOUR NAME</label>
+    <div class="name-pop-row">
+      <input class="online-name" id="name-input" maxlength="14" autocomplete="off"
+             spellcheck="false" placeholder="Player">
+      <button class="name-save" id="btn-name-save">SAVE</button>
+    </div>
+  </aside>
 
   <!-- Chat (online play: lobby + in-game) -->
   <aside class="chat hidden" id="chat-panel">

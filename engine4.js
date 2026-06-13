@@ -356,6 +356,42 @@ const Truco4 = (() => {
       this.startHand(fixedHands);
       return true;
     }
+
+    /* ---------- snapshot (late join / rejoin) ---------- */
+
+    /* full mid-game state as plain JSON — the host sends this to a player
+       taking over a seat so they can continue in lockstep */
+    serialize() {
+      return JSON.parse(JSON.stringify({
+        scores: this.scores,
+        firstMano: this.firstMano,
+        mano: this.mano,
+        dealer: this.dealer,
+        hands: this.hands,
+        initialHands: this.initialHands,
+        tricks: this.tricks,
+        current: this.current,
+        leader: this.leader,
+        toAct: this.toAct,
+        firstCardPlayed: this.firstCardPlayed,
+        trucoLevel: this.trucoLevel,
+        trucoRaiserTeam: this.trucoRaiserTeam,
+        envidoResolved: this.envidoResolved,
+        envidoForeclosed: this.envidoForeclosed,
+        pending: this.pending,
+        handOver: this.handOver,
+        gameOver: this.gameOver,
+        gameWinner: this.gameWinner,
+      }));
+    }
+
+    static restore(state) {
+      // bypass the constructor: no new deal, no hand-start event
+      const g = Object.create(Game4.prototype);
+      Object.assign(g, JSON.parse(JSON.stringify(state)));
+      g.events = [];
+      return g;
+    }
   }
 
   return { Game4, freshDeal4, teamOf, otherTeam, TRUCO_NAMES, TRUCO_HAND_VALUE };

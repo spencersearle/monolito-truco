@@ -421,6 +421,65 @@ test("fixed hands round-trip through nextHand (lockstep dealing)", () => {
   assertEq(g.mano, 1, "rotated");
 });
 
+/* ---------------- snapshot / restore (mid-game rejoin) ---------------- */
+
+console.log("\nSnapshot & restore (late join / rejoin)");
+
+function snap(g) {
+  return JSON.stringify({
+    scores: g.scores, mano: g.mano, dealer: g.dealer, toAct: g.toAct,
+    leader: g.leader, hands: g.hands, current: g.current, tricks: g.tricks,
+    initialHands: g.initialHands, firstCardPlayed: g.firstCardPlayed,
+    trucoLevel: g.trucoLevel, trucoRaiserTeam: g.trucoRaiserTeam,
+    envidoResolved: g.envidoResolved, envidoForeclosed: g.envidoForeclosed,
+    pending: g.pending, handOver: g.handOver, gameOver: g.gameOver,
+    gameWinner: g.gameWinner, firstMano: g.firstMano,
+  });
+}
+
+test("a restored snapshot is byte-identical to the source mid-hand", () => {
+  const g = new Game4(0, ENV_HANDS);
+  g.call(0, "Envido");        // leave a call pending
+  g.drainEvents();
+  const reborn = Truco4.Game4.restore(g.serialize());
+  assertEq(snap(reborn), snap(g), "restored state matches");
+  assert(reborn.events.length === 0, "restored game starts with no queued events");
+});
+
+test("a restored game keeps playing in lockstep with the original", () => {
+  // 200 games; at a few mid-hand points, restore a fresh client from the host
+  // snapshot and assert it stays identical through several more actions
+  for (let n = 0; n < 200; n++) {
+    const host = new Game4(n % 4);
+    let steps = 0;
+    while (!host.gameOver) {
+      if (++steps > 5000) throw new Error("stuck game");
+      if (host.handOver) { host.nextHand(); host.drainEvents(); continue; }
+      if (steps % 9 === 0) {
+        const clone = Truco4.Game4.restore(host.serialize());
+        if (snap(clone) !== snap(host)) throw new Error(`restore mismatch game ${n}`);
+        // replicate the next action to both and re-compare
+        const actors = [0, 1, 2, 3].filter((s) => host.legalActions(s).length);
+        const seat = actors[0];
+        const act = host.legalActions(seat)[0];
+        const idx = Math.floor(Math.random() * host.hands[seat].length);
+        if (act === "play") { host.playCard(seat, idx); clone.playCard(seat, idx); }
+        else { host.call(seat, act); clone.call(seat, act); }
+        host.drainEvents(); clone.drainEvents();
+        if (snap(clone) !== snap(host)) throw new Error(`post-restore desync game ${n}`);
+        continue;
+      }
+      const actors = [0, 1, 2, 3].filter((s) => host.legalActions(s).length);
+      const seat = actors[Math.floor(Math.random() * actors.length)];
+      const acts = host.legalActions(seat);
+      const act = acts[Math.floor(Math.random() * acts.length)];
+      if (act === "play") host.playCard(seat, Math.floor(Math.random() * host.hands[seat].length));
+      else host.call(seat, act);
+      host.drainEvents();
+    }
+  }
+});
+
 /* ---------------- determinism fuzz ---------------- */
 
 console.log("\nRandom-play fuzz (500 games)");

@@ -27,8 +27,11 @@
     btnOnlineCancel: $("btn-online-cancel"),
     onlineNamebox: $("online-namebox"), onlineName: $("online-name"),
     onlineModes: $("online-modes"), btnMode1v1: $("btn-mode-1v1"), btnMode2v2: $("btn-mode-2v2"),
+    btnJoinGame: $("btn-join-game"), onlineJoinbox: $("online-joinbox"),
+    joinLink: $("join-link"), btnJoinGo: $("btn-join-go"),
     lobbyRoster: $("lobby-roster"), btnStart2v2: $("btn-start-2v2"),
     btnJoin2v2: $("btn-join-2v2"), btnLobbyChat: $("btn-lobby-chat"),
+    lobbyChatBadge: $("lobby-chat-badge"), btnLobbyName: $("btn-lobby-name"),
     handYou: $("hand-you"), handAi: $("hand-ai"),
     handLeft: $("hand-left"), handRight: $("hand-right"),
     plateTop: $("plate-top"), plateLeft: $("plate-left"),
@@ -49,6 +52,10 @@
     chatPanel: $("chat-panel"), chatLog: $("chat-log"),
     chatForm: $("chat-form"), chatInput: $("chat-input"),
     btnChatClose: $("btn-chat-close"),
+    chatToast: $("chat-toast"), chatToastWho: $("chat-toast-who"),
+    chatToastText: $("chat-toast-text"),
+    btnName: $("btn-name"), namePanel: $("name-panel"),
+    nameInput: $("name-input"), btnNameSave: $("btn-name-save"),
   };
 
   /* ---------- state ---------- */
@@ -70,6 +77,7 @@
   let aiThinking = false;
   let bubbleTimers = { you: null, top: null, left: null, right: null };
   let unreadChat = 0;
+  let toastTimer = null;
 
   const BOT_NAMES = ["MONOBOT", "ORO-9", "AZUR", "VALE-4"];
 
@@ -851,7 +859,27 @@
     switch (m.t) {
       case "hello": {
         if (seat !== -1) return;                       // already seated
-        const free = room.started ? -1 : room.seats.findIndex((s) => s.kind === "open");
+        if (room.started) {
+          // mid-game: a newcomer (or returning player) may take over a bot seat
+          const botSeat = room.seats.findIndex((s) => s.kind === "bot");
+          if (botSeat === -1 || !game4 || game4.gameOver) {
+            Net.sendToPeer(id, { t: "full" });
+            setTimeout(() => Net.closePeer(id), 400);
+            return;
+          }
+          const botName = room.seats[botSeat].name;
+          room.seats[botSeat] = { kind: "human", name: cleanName(m.name), connId: id };
+          Net.sendToPeer(id, {
+            t: "resume4", state: game4.serialize(),
+            seats: publicSeats(), yourSeat: botSeat,
+          });
+          Net.broadcast({ t: "seathuman", seat: botSeat, name: room.seats[botSeat].name }, id);
+          chatSys(`${room.seats[botSeat].name} takes over ${botName}`);
+          renderPlates4();
+          if (!busy) onIdle();
+          return;
+        }
+        const free = room.seats.findIndex((s) => s.kind === "open");
         if (free === -1) {
           Net.sendToPeer(id, { t: "full" });
           setTimeout(() => Net.closePeer(id), 400);
@@ -865,6 +893,9 @@
       }
       case "i":
         if (seat !== -1 && room.started) hostApply(seat, m.a);
+        break;
+      case "rename":
+        if (seat !== -1) hostRename(seat, cleanName(m.name));
         break;
       case "chat":
         if (seat !== -1) {
@@ -935,13 +966,13 @@
     beginNet4(mano, fixed);
   }
 
-  function beginNet4(mano, hands) {
+  function setupNet4(makeGame) {
     document.querySelector(".endgame")?.remove();
     game = null;
     net = null;
     pendingDeal4 = null;
     clearEcho();
-    game4 = new Truco4.Game4(mano, hands);
+    game4 = makeGame();
     queue = [];
     busy = false;
     aiThinking = false;
@@ -955,9 +986,33 @@
     el.labelYou.textContent = "US";
     el.labelOpp.textContent = "THEM";
     el.btnChat.classList.remove("hidden");
+    el.btnName.classList.remove("hidden");
     renderScores4();
     renderPlates4();
+  }
+
+  function beginNet4(mano, hands) {
+    setupNet4(() => new Truco4.Game4(mano, hands));
     sync4();
+  }
+
+  /* take a seat in a game already underway: restore the host's snapshot
+     and repaint the table mid-hand (no deal animation) */
+  function resumeNet4(state) {
+    setupNet4(() => Truco4.Game4.restore(state));
+    clearBattle();
+    for (let seat = 0; seat < 4; seat++) {
+      const card = game4.current[seat];
+      if (card) PLAYED_ELS[seatPos(seat)]().appendChild(makeCardEl(card, false));
+    }
+    renderPips4();
+    renderStake4();
+    renderHands4(false);
+    renderChips4();
+    msg(game4.toAct === room.mySeat && !game4.pending
+      ? "You're at the table — your move"
+      : "You're at the table — the hand plays on");
+    if (!busy) onIdle();
   }
 
   /* guest side */
@@ -995,6 +1050,12 @@
         room.started = true;
         beginNet4(m.mano, m.hands);
         break;
+      case "resume4": // joining a game already underway (taking over a bot seat)
+        room.seats = m.seats.map((s) => ({ ...s, connId: null }));
+        room.mySeat = m.yourSeat;
+        room.started = true;
+        resumeNet4(m.state);
+        break;
       case "deal4":
         if (!game4) return;
         if (busy || queue.length) pendingDeal4 = m.hands;
@@ -1010,6 +1071,24 @@
           chatSys(`${old} left — ${room.seats[m.seat].name} takes over`);
           if (game4) renderPlates4();
           else renderLobbyGuest();
+        }
+        break;
+      case "seathuman": // a player took over a bot seat mid-game
+        if (room.seats) {
+          const bot = room.seats[m.seat].name;
+          room.seats[m.seat] = { kind: "human", name: cleanName(m.name), connId: null };
+          chatSys(`${room.seats[m.seat].name} takes over ${bot}`);
+          if (game4) renderPlates4();
+        }
+        break;
+      case "seatname": // someone renamed themselves mid-game
+        if (room.seats) {
+          const old = room.seats[m.seat].name;
+          room.seats[m.seat].name = cleanName(m.name);
+          chatSys(m.seat === room.mySeat
+            ? `You are now ${room.seats[m.seat].name}`
+            : `${old} is now ${room.seats[m.seat].name}`);
+          if (game4) renderPlates4();
         }
         break;
       case "chat":
@@ -1138,6 +1217,7 @@
     el.btnStart2v2.disabled = !ready;
     el.btnStart2v2.textContent = ready ? "START GAME" : "FILL ALL 4 SEATS TO START";
     el.btnLobbyChat.classList.toggle("hidden", Net.roomSize() === 0);
+    el.btnLobbyName.classList.remove("hidden");
     el.onlineStatus.textContent = ready
       ? "Table full — deal the cards!"
       : "Share the link — friends take seats as they arrive. Short a player? Add a bot.";
@@ -1147,6 +1227,7 @@
     showOverlay("AT THE TABLE", "Waiting for the host to start the game…");
     renderRoster(false);
     el.btnLobbyChat.classList.remove("hidden");
+    el.btnLobbyName.classList.remove("hidden");
   }
 
   /* ---------- chat ---------- */
@@ -1168,17 +1249,45 @@
     while (el.chatLog.children.length > 120) el.chatLog.firstChild.remove();
     if (el.chatPanel.classList.contains("hidden") && !mine) {
       unreadChat++;
-      el.chatBadge.textContent = unreadChat > 9 ? "9+" : unreadChat;
-      el.chatBadge.classList.remove("hidden");
+      renderChatBadges();
+      chatToast(who, text, sys);
     }
   }
 
   function chatSys(text) { addChat(null, text, false, true); }
 
+  /* unread counter on the in-game icon and the lobby TABLE TALK button */
+  function renderChatBadges() {
+    const label = unreadChat > 9 ? "9+" : String(unreadChat);
+    for (const badge of [el.chatBadge, el.lobbyChatBadge]) {
+      badge.textContent = label;
+      badge.classList.toggle("hidden", unreadChat === 0);
+    }
+  }
+
+  /* pop the incoming message (with the sender's name) while the panel is closed */
+  function chatToast(who, text, sys) {
+    el.chatToastWho.textContent = sys ? "" : who;
+    el.chatToastText.textContent = text;
+    el.chatToast.classList.toggle("chat-toast-sys", sys);
+    el.chatToast.classList.remove("hidden");
+    el.chatToast.style.animation = "none";
+    void el.chatToast.offsetWidth; // restart pop-in
+    el.chatToast.style.animation = "";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 3500);
+  }
+
+  function hideToast() {
+    clearTimeout(toastTimer);
+    el.chatToast.classList.add("hidden");
+  }
+
   function openChat() {
     el.chatPanel.classList.remove("hidden");
     unreadChat = 0;
-    el.chatBadge.classList.add("hidden");
+    renderChatBadges();
+    hideToast();
     el.chatLog.scrollTop = el.chatLog.scrollHeight;
   }
 
@@ -1195,9 +1304,49 @@
   function resetChat() {
     el.chatLog.innerHTML = "";
     unreadChat = 0;
-    el.chatBadge.classList.add("hidden");
+    renderChatBadges();
+    hideToast();
     closeChat();
     el.btnChat.classList.add("hidden");
+  }
+
+  /* ---------- edit name (lobby + in-game) ---------- */
+
+  function openNamePanel() {
+    el.nameInput.value = localStorage.getItem("monolito-name") || myName();
+    el.namePanel.classList.remove("hidden");
+    el.nameInput.focus();
+    el.nameInput.select();
+  }
+
+  function closeNamePanel() { el.namePanel.classList.add("hidden"); }
+
+  function applyRename() {
+    const name = cleanName(el.nameInput.value);
+    closeNamePanel();
+    localStorage.setItem("monolito-name", name);
+    el.onlineName.value = name;
+    if (net) {
+      Net.send({ t: "hello", name });            // 1v1: rival relabels on hello
+    } else if (room) {
+      if (room.role === "host") hostRename(room.mySeat, name);
+      else Net.send({ t: "rename", name });
+    }
+  }
+
+  /* host: apply a rename for a seat and replicate it to every screen */
+  function hostRename(seat, name) {
+    const old = room.seats[seat].name;
+    if (old === name) return;
+    room.seats[seat].name = name;
+    if (room.started) {
+      Net.broadcast({ t: "seatname", seat, name });
+      renderPlates4();
+    } else {
+      broadcastRoster();
+      renderLobbyHost();
+    }
+    chatSys(`${old} is now ${name}`);
   }
 
   /* ---------- stage transitions ---------- */
@@ -1210,6 +1359,7 @@
       el.labelYou.textContent = "YOU";
       el.labelOpp.textContent = net ? (rivalName || "RIVAL").toUpperCase() : "EL MONOLITO";
       el.btnChat.classList.toggle("hidden", !net);
+      el.btnName.classList.toggle("hidden", !net);
     }
     if (location.hash.startsWith("#join")) {
       history.replaceState(null, "", location.pathname + location.search);
@@ -1255,6 +1405,8 @@
     el.playedLeft.classList.add("hidden");
     el.playedRight.classList.add("hidden");
     for (const p of [el.plateTop, el.plateLeft, el.plateRight, el.plateYou]) p.classList.add("hidden");
+    el.btnName.classList.add("hidden");
+    closeNamePanel();
     resetChat();
     el.splash.classList.remove("gone");
   }
@@ -1305,10 +1457,13 @@
   function netMsg(m) {
     if (!m || typeof m !== "object") return;
     switch (m.t) {
-      case "hello":
-        rivalName = cleanName(m.name);
+      case "hello": {
+        const name = cleanName(m.name);
+        if (net && rivalName && name !== rivalName) chatSys(`${rivalName} is now ${name}`);
+        rivalName = name;
         if (net) el.labelOpp.textContent = rivalName.toUpperCase();
         break;
+      }
       case "start": // first game, or a host-initiated rematch
         document.querySelector(".endgame")?.remove();
         beginNet("guest", m.mano === "guest" ? "you" : "ai",
@@ -1363,10 +1518,13 @@
     el.onlineStatus.textContent = status;
     el.onlineNamebox.classList.add("hidden");
     el.onlineModes.classList.add("hidden");
+    el.onlineJoinbox.classList.add("hidden");
+    el.btnJoinGo.classList.add("hidden");
     el.lobbyRoster.classList.add("hidden");
     el.btnStart2v2.classList.add("hidden");
     el.btnJoin2v2.classList.add("hidden");
     el.btnLobbyChat.classList.add("hidden");
+    el.btnLobbyName.classList.add("hidden");
     el.onlineLinkbox.classList.toggle("hidden", !link);
     el.onlineHint.classList.toggle("hidden", !hint);
     el.btnOnlineCancel.textContent = cancelLabel;
@@ -1427,6 +1585,37 @@
   function saveName() {
     const n = cleanName(el.onlineName.value);
     if (n !== "Player" || el.onlineName.value.trim()) localStorage.setItem("monolito-name", n);
+  }
+
+  /* the JOIN GAME menu: paste an invite link to (re)join an existing table —
+     handy after a dropped connection, since the lobby link leaves the URL bar */
+  function openJoinPrompt() {
+    if (!Net.available()) {
+      showNotice("JOIN A TABLE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+      return;
+    }
+    showOverlay("JOIN A TABLE", "Paste the invite link your friend sent you.");
+    el.onlineName.value = localStorage.getItem("monolito-name") || "";
+    el.joinLink.value = "";
+    el.onlineNamebox.classList.remove("hidden");
+    el.onlineJoinbox.classList.remove("hidden");
+    el.btnJoinGo.classList.remove("hidden");
+  }
+
+  function joinFromLink() {
+    const text = el.joinLink.value.trim();
+    const m4 = text.match(/join4=([a-z0-9]+)/i);
+    const m1 = text.match(/join=([a-z0-9]+)/i);
+    if (m4) {
+      saveName();
+      joinTable4(m4[1].toLowerCase());
+    } else if (m1) {
+      saveName();
+      joinTable(m1[1].toLowerCase());
+    } else {
+      el.onlineStatus.textContent =
+        "That doesn't look like an invite link — paste the whole link (it contains #join=… or #join4=…).";
+    }
   }
 
   function openTable() {
@@ -1503,6 +1692,11 @@
   });
 
   el.btnOnline.addEventListener("click", openOnlineMenu);
+  el.btnJoinGame.addEventListener("click", openJoinPrompt);
+  el.btnJoinGo.addEventListener("click", joinFromLink);
+  el.joinLink.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); joinFromLink(); }
+  });
   el.btnMode1v1.addEventListener("click", openTable);
   el.btnMode2v2.addEventListener("click", () => { saveName(); openTable4(); });
   el.btnStart2v2.addEventListener("click", () => {
@@ -1547,6 +1741,17 @@
   });
   el.btnLobbyChat.addEventListener("click", openChat);
   el.btnChatClose.addEventListener("click", closeChat);
+  el.chatToast.addEventListener("click", () => { hideToast(); openChat(); });
+
+  el.btnName.addEventListener("click", () => {
+    if (el.namePanel.classList.contains("hidden")) openNamePanel();
+    else closeNamePanel();
+  });
+  el.btnLobbyName.addEventListener("click", openNamePanel);
+  el.btnNameSave.addEventListener("click", applyRename);
+  el.nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); applyRename(); }
+  });
   el.chatForm.addEventListener("submit", (e) => {
     e.preventDefault();
     sendChat(el.chatInput.value);
