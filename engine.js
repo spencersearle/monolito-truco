@@ -362,9 +362,70 @@ const Truco = (() => {
       this.startHand(fixedHands);
       return true;
     }
+
+    /* ---------- snapshot (reconnect / rejoin) ---------- */
+
+    /* full mid-game state as plain JSON — the host sends this (mirrored) to a
+       rival who reconnects, so they resume exactly where the table is */
+    serialize() {
+      return JSON.parse(JSON.stringify({
+        scores: this.scores,
+        dealer: this.dealer,
+        mano: this.mano,
+        hands: this.hands,
+        initialHands: this.initialHands,
+        tricks: this.tricks,
+        current: this.current,
+        leader: this.leader,
+        toAct: this.toAct,
+        firstCardPlayed: this.firstCardPlayed,
+        trucoLevel: this.trucoLevel,
+        trucoRaiser: this.trucoRaiser,
+        envidoResolved: this.envidoResolved,
+        envidoForeclosed: this.envidoForeclosed,
+        pending: this.pending,
+        handOver: this.handOver,
+        gameOver: this.gameOver,
+        gameWinner: this.gameWinner,
+      }));
+    }
+
+    static restore(state) {
+      const g = Object.create(Game.prototype);
+      Object.assign(g, JSON.parse(JSON.stringify(state)));
+      g.events = [];
+      return g;
+    }
   }
 
-  return { Game, power, envidoValue, freshDeal, TRUCO_NAMES, TRUCO_HAND_VALUE, other };
+  /* swap a serialized state between the two seat perspectives (you<->ai).
+     The host's snapshot has you=host; mirroring it yields you=guest for the
+     rival's engine, matching the deal-mirroring the online protocol already uses. */
+  function mirror(state) {
+    const sw = (p) => (p === "you" ? "ai" : p === "ai" ? "you" : p); // null / "tie" pass through
+    return {
+      scores: { you: state.scores.ai, ai: state.scores.you },
+      dealer: sw(state.dealer),
+      mano: sw(state.mano),
+      hands: { you: state.hands.ai, ai: state.hands.you },
+      initialHands: { you: state.initialHands.ai, ai: state.initialHands.you },
+      tricks: state.tricks.map((t) => ({ you: t.ai, ai: t.you, winner: sw(t.winner) })),
+      current: { you: state.current.ai, ai: state.current.you },
+      leader: sw(state.leader),
+      toAct: sw(state.toAct),
+      firstCardPlayed: { you: state.firstCardPlayed.ai, ai: state.firstCardPlayed.you },
+      trucoLevel: state.trucoLevel,
+      trucoRaiser: sw(state.trucoRaiser),
+      envidoResolved: state.envidoResolved,
+      envidoForeclosed: state.envidoForeclosed,
+      pending: state.pending ? { ...state.pending, caller: sw(state.pending.caller) } : null,
+      handOver: state.handOver,
+      gameOver: state.gameOver,
+      gameWinner: sw(state.gameWinner),
+    };
+  }
+
+  return { Game, power, envidoValue, freshDeal, mirror, TRUCO_NAMES, TRUCO_HAND_VALUE, other };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = Truco;

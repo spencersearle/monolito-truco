@@ -25,10 +25,11 @@
     onlineLink: $("online-link"), btnCopyLink: $("btn-copy-link"),
     btnShareLink: $("btn-share-link"), onlineHint: $("online-hint"),
     btnOnlineCancel: $("btn-online-cancel"),
+    onlineCodebox: $("online-codebox"), onlineCode: $("online-code"), btnCopyCode: $("btn-copy-code"),
     onlineNamebox: $("online-namebox"), onlineName: $("online-name"),
     onlineModes: $("online-modes"), btnMode1v1: $("btn-mode-1v1"), btnMode2v2: $("btn-mode-2v2"),
     btnJoinGame: $("btn-join-game"), onlineJoinbox: $("online-joinbox"),
-    joinLink: $("join-link"), btnJoinGo: $("btn-join-go"),
+    joinCode: $("join-code"), btnJoinGo: $("btn-join-go"),
     lobbyRoster: $("lobby-roster"), btnStart2v2: $("btn-start-2v2"),
     btnJoin2v2: $("btn-join-2v2"), btnLobbyChat: $("btn-lobby-chat"),
     lobbyChatBadge: $("lobby-chat-badge"), btnLobbyName: $("btn-lobby-name"),
@@ -64,6 +65,9 @@
   let net = null;              // null = solo vs AI; { role: 'host'|'guest' } = online 1v1
   let rivalName = null;        // 1v1 online rival's name
   let pendingDeal = null;      // 1v1 guest: next hand received mid-animation
+  let rivalGone = false;       // 1v1 host: rival dropped, paused waiting for rejoin
+  let myTableCode = null;      // the code others type in to join/rejoin my table
+  let joinCode = null;         // code I'm joining with (mode auto-detected from msgs)
 
   let game4 = null;            // 2v2 engine (absolute seats 0-3)
   let room = null;             // 2v2: { role, code, seats:[{kind,name,connId}], mySeat, started }
@@ -78,6 +82,14 @@
   let bubbleTimers = { you: null, top: null, left: null, right: null };
   let unreadChat = 0;
   let toastTimer = null;
+
+  // heartbeat: detect a silently dropped peer (abrupt close / lost wifi) fast,
+  // so rejoin kicks in within seconds rather than waiting on an ICE timeout
+  let hbTimer = null;
+  let rivalSeen = 0;                 // 1v1 / 2v2-guest: last message from the table
+  const peerSeen = new Map();        // 2v2-host: connId -> last message timestamp
+  const HB_INTERVAL = 2500;
+  const HB_TIMEOUT = 8000;
 
   const BOT_NAMES = ["MONOBOT", "ORO-9", "AZUR", "VALE-4"];
 
@@ -122,6 +134,52 @@
   function onIdle() {
     if (game4) onIdle4();
     else onIdle1();
+  }
+
+  /* ---------- heartbeat (drop detection) ---------- */
+
+  function startHeartbeat() {
+    stopHeartbeat();
+    rivalSeen = Date.now();
+    peerSeen.clear();
+    hbTimer = setInterval(heartbeatTick, HB_INTERVAL);
+  }
+
+  function stopHeartbeat() {
+    if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
+    peerSeen.clear();
+  }
+
+  function markRivalSeen() { rivalSeen = Date.now(); }
+  function markPeerSeen(id) { peerSeen.set(id, Date.now()); }
+
+  function heartbeatTick() {
+    const now = Date.now();
+    if (net) {                                   // 1v1 (host or guest)
+      Net.send({ t: "hb" });
+      if (now - rivalSeen > HB_TIMEOUT) {
+        if (net.role === "host") hostRival1Dropped();
+        else guestConnLost();
+      }
+      return;
+    }
+    if (room && room.role === "host") {          // 2v2 host watches each guest
+      Net.broadcast({ t: "hb" });
+      for (const [seat, s] of room.seats.entries()) {
+        if (s.connId == null) continue;
+        if (now - (peerSeen.get(s.connId) || now) > HB_TIMEOUT) {
+          peerSeen.delete(s.connId);
+          Net.closePeer(s.connId);
+          hostSeatLost(seat);                    // lobby: free seat · in-game: bot takes over
+        }
+      }
+      return;
+    }
+    if (room && room.role === "guest") {         // 2v2 guest watches the host
+      Net.send({ t: "hb" });
+      if (now - rivalSeen > HB_TIMEOUT)
+        netEnded4("CONNECTION LOST", "The connection to the table was lost.");
+    }
   }
 
   /* ---------- rendering (shared) ---------- */
@@ -843,18 +901,22 @@
     Net.hostRoom({
       onReady: (code) => {
         room.code = code;
+        myTableCode = code;
         const url = location.origin + location.pathname + "#join4=" + code;
-        showLobbyHost(url);
+        showLobbyHost(url, code);
       },
-      onPeerJoin: () => { /* wait for their hello */ },
+      onPeerJoin: (id) => markPeerSeen(id),
       onPeerMessage: hostPeerMsg,
       onPeerLeave: (id) => hostPeerLeft(id),
       onError: netError4,
     });
+    startHeartbeat();
   }
 
   function hostPeerMsg(id, m) {
     if (!m || typeof m !== "object" || !room) return;
+    markPeerSeen(id);
+    if (m.t === "hb") return;
     const seat = room.seats.findIndex((s) => s.connId === id);
     switch (m.t) {
       case "hello": {
@@ -989,6 +1051,7 @@
     el.btnName.classList.remove("hidden");
     renderScores4();
     renderPlates4();
+    startHeartbeat();
   }
 
   function beginNet4(mano, hands) {
@@ -1017,27 +1080,10 @@
 
   /* guest side */
 
-  function joinTable4(code) {
-    if (!Net.available()) {
-      showNotice("PLAY ONLINE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
-      return;
-    }
-    saveName();
-    showOverlay("JOINING TABLE", "Crossing the gold sea…");
-    room = { role: "guest", code, mySeat: null, seats: null, started: false };
-    Net.join(code, {
-      onConnect: () => {
-        Net.send({ t: "hello", name: myName() });
-        showOverlay("JOINING TABLE", "Connected — waiting for a seat…");
-      },
-      onMessage: guestMsg4,
-      onClose: () => netEnded4("TABLE CLOSED", "The connection to the table was lost."),
-      onError: netError4,
-    });
-  }
-
   function guestMsg4(m) {
     if (!m || typeof m !== "object" || !room) return;
+    markRivalSeen();
+    if (m.t === "hb") return;
     switch (m.t) {
       case "roster":
         room.seats = m.seats.map((s) => ({ ...s, connId: null }));
@@ -1112,6 +1158,7 @@
     else Net.send({ t: "bye" });
     room = null;
     game4 = null;
+    stopHeartbeat();
     clearTimeout(botTimer);
     clearEcho();
     Net.destroy();
@@ -1204,8 +1251,9 @@
     el.lobbyRoster.classList.remove("hidden");
   }
 
-  function showLobbyHost(url) {
-    showOverlay("YOUR 2v2 TABLE", "Share the link — friends take seats as they arrive.", { link: url });
+  function showLobbyHost(url, code) {
+    showOverlay("YOUR 2v2 TABLE", "Share the code — friends take seats as they arrive.",
+      { code: code || room.code, link: url });
     renderLobbyHost();
   }
 
@@ -1220,7 +1268,7 @@
     el.btnLobbyName.classList.remove("hidden");
     el.onlineStatus.textContent = ready
       ? "Table full — deal the cards!"
-      : "Share the link — friends take seats as they arrive. Short a player? Add a bot.";
+      : "Share the code — friends take seats as they arrive. Short a player? Add a bot.";
   }
 
   function renderLobbyGuest() {
@@ -1385,6 +1433,9 @@
     aiThinking = false;
     pendingDeal = null;
     pendingDeal4 = null;
+    rivalGone = false;
+    myTableCode = null;
+    stopHeartbeat();
     clearEcho();
     clearTimeout(botTimer);
     for (const k of Object.keys(bubbleTimers)) clearTimeout(bubbleTimers[k]);
@@ -1423,7 +1474,43 @@
     aiThinking = false;
     enterStage();
     renderScores();
+    startHeartbeat();
     sync();
+  }
+
+  /* repaint the 1v1 board straight from engine state (no deal animation) —
+     used when a dropped player reconnects mid-hand */
+  function repaintStage1(message) {
+    clearBattle();
+    if (game.current.you) {
+      const c = makeCardEl(game.current.you, false); c.classList.add("thrown"); el.playedYou.appendChild(c);
+    }
+    if (game.current.ai) {
+      const c = makeCardEl(game.current.ai, false); c.classList.add("thrown"); el.playedAi.appendChild(c);
+    }
+    renderPips();
+    renderStake();
+    renderHands(false);
+    renderChips();
+    renderScores();
+    if (message) msg(message);
+    if (game.gameOver && !document.querySelector(".endgame")) showEndgame(game.gameWinner);
+  }
+
+  /* guest: take over an in-progress 1v1 table from the host's snapshot */
+  function resumeNet1(state) {
+    net = { role: "guest" };
+    game4 = null;
+    room = null;
+    pendingDeal = null;
+    game = Truco.Game.restore(state);
+    queue = [];
+    busy = false;
+    aiThinking = false;
+    enterStage();
+    startHeartbeat();
+    repaintStage1("Reconnected — the hand plays on");
+    if (!busy && !game.gameOver) onIdle();
   }
 
   function hostBegin() {
@@ -1456,6 +1543,8 @@
 
   function netMsg(m) {
     if (!m || typeof m !== "object") return;
+    markRivalSeen();
+    if (m.t === "hb") return;
     switch (m.t) {
       case "hello": {
         const name = cleanName(m.name);
@@ -1468,6 +1557,10 @@
         document.querySelector(".endgame")?.remove();
         beginNet("guest", m.mano === "guest" ? "you" : "ai",
           { you: m.hands.guest, ai: m.hands.host });
+        break;
+      case "resume": // joining a 1v1 table already in play (rejoin / substitute)
+        document.querySelector(".endgame")?.remove();
+        resumeNet1(m.state);
         break;
       case "deal":
         if (!net || !game) return;
@@ -1487,7 +1580,10 @@
         }
         break;
       case "bye":
-        netEnded("RIVAL LEFT", "Your rival left the table.");
+        // guest left → host keeps the table so they can rejoin with the code;
+        // host left → the table is gone (host owns the peer)
+        if (net && net.role === "host") hostRival1Dropped();
+        else netEnded("TABLE CLOSED", "The host closed the table.");
         break;
     }
   }
@@ -1498,6 +1594,7 @@
     Net.send({ t: "bye" });
     net = null;
     rivalName = null;
+    stopHeartbeat();
     Net.destroy();
   }
 
@@ -1513,7 +1610,7 @@
 
   /* ---------- online overlay ---------- */
 
-  function showOverlay(title, status, { link = null, hint = false, cancelLabel = "CANCEL" } = {}) {
+  function showOverlay(title, status, { link = null, code = null, hint = false, cancelLabel = "CANCEL" } = {}) {
     el.onlineTitle.textContent = title;
     el.onlineStatus.textContent = status;
     el.onlineNamebox.classList.add("hidden");
@@ -1525,10 +1622,13 @@
     el.btnJoin2v2.classList.add("hidden");
     el.btnLobbyChat.classList.add("hidden");
     el.btnLobbyName.classList.add("hidden");
+    el.onlineCodebox.classList.toggle("hidden", !code);
     el.onlineLinkbox.classList.toggle("hidden", !link);
     el.onlineHint.classList.toggle("hidden", !hint);
     el.btnOnlineCancel.textContent = cancelLabel;
-    el.btnCopyLink.textContent = "COPY LINK";
+    el.btnCopyLink.textContent = "OR COPY A LINK";
+    el.btnCopyCode.textContent = "COPY";
+    if (code) el.onlineCode.textContent = code.toUpperCase();
     if (link) {
       el.onlineLink.value = link;
       el.btnShareLink.classList.toggle("hidden", !navigator.share);
@@ -1541,6 +1641,13 @@
   }
 
   function closeOverlay() {
+    // 1v1 host paused on a dropped rival: CANCEL means leave the table for good
+    if (rivalGone) {
+      rivalGone = false;
+      leaveNet();
+      exitToSplash();
+      return;
+    }
     el.onlineOverlay.classList.add("hidden");
     if (!net && !game4) {
       if (room) { leaveNet4(); }      // abandon a half-open 2v2 lobby
@@ -1560,9 +1667,14 @@
   function netError(e) {
     const t = e && e.type;
     if (t === "peer-unavailable") {
-      lobbyFailed("Table not found — it may have closed. Ask your rival for a fresh link.");
+      // host is gone (guest can't reach the table) — couldn't (re)join
+      if (net || game) { net = null; game = null; }
+      lobbyFailed("Table not found — it may have closed. Double-check the code, or ask for a fresh one.");
     } else if (t === "timeout") {
-      lobbyFailed("Couldn't reach your rival — one of your networks may be blocking the connection. Try again or switch networks.");
+      lobbyFailed("Couldn't reach the table — one of your networks may be blocking the connection. Try again or switch networks.");
+    } else if (net && net.role === "host" && game) {
+      // broker/link hiccup on the host: the WebRTC data link survives, and a real
+      // rival drop is caught by the connection's close event — so ignore this
     } else if (net) {
       netEnded("CONNECTION LOST", "The connection to your rival was lost.");
     } else {
@@ -1587,35 +1699,92 @@
     if (n !== "Player" || el.onlineName.value.trim()) localStorage.setItem("monolito-name", n);
   }
 
-  /* the JOIN GAME menu: paste an invite link to (re)join an existing table —
-     handy after a dropped connection, since the lobby link leaves the URL bar */
+  /* the JOIN GAME menu: type a table code to join — or rejoin after a drop.
+     The code is the same one the host is showing; mode (1v1/2v2) is detected
+     automatically from the first message the host sends. */
   function openJoinPrompt() {
     if (!Net.available()) {
       showNotice("JOIN A TABLE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
       return;
     }
-    showOverlay("JOIN A TABLE", "Paste the invite link your friend sent you.");
+    showOverlay("JOIN A TABLE", "Enter the table code your friend shared.");
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
-    el.joinLink.value = "";
+    el.joinCode.value = "";
     el.onlineNamebox.classList.remove("hidden");
     el.onlineJoinbox.classList.remove("hidden");
     el.btnJoinGo.classList.remove("hidden");
   }
 
-  function joinFromLink() {
-    const text = el.joinLink.value.trim();
-    const m4 = text.match(/join4=([a-z0-9]+)/i);
-    const m1 = text.match(/join=([a-z0-9]+)/i);
-    if (m4) {
-      saveName();
-      joinTable4(m4[1].toLowerCase());
-    } else if (m1) {
-      saveName();
-      joinTable(m1[1].toLowerCase());
-    } else {
-      el.onlineStatus.textContent =
-        "That doesn't look like an invite link — paste the whole link (it contains #join=… or #join4=…).";
+  /* accept a bare code or a pasted invite link, normalize to the 6-char code */
+  function parseCode(text) {
+    const t = String(text || "").trim();
+    const m = t.match(/join4?=([a-z0-9]+)/i);     // a pasted #join= / #join4= link
+    const raw = (m ? m[1] : t).toLowerCase().replace(/[^a-z0-9]/g, "");
+    return raw;
+  }
+
+  function joinFromCode() {
+    const code = parseCode(el.joinCode.value);
+    if (code.length < 4) {
+      el.onlineStatus.textContent = "Enter the table code (6 letters and numbers) the host is showing.";
+      return;
     }
+    saveName();
+    joinByCode(code);
+  }
+
+  /* unified guest join: connect by code, decide 1v1 vs 2v2 from the host's
+     first message, and route everything to the matching handler */
+  const MODE_2V2 = new Set(["roster", "start4", "resume4", "deal4", "a4", "seatbot", "seathuman", "seatname"]);
+
+  function joinByCode(code) {
+    if (!Net.available()) {
+      showNotice("JOIN A TABLE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+      return;
+    }
+    joinCode = code;
+    net = null; room = null; game = null; game4 = null;
+    showOverlay("JOINING TABLE", "Crossing the gold sea…");
+    Net.join(code, {
+      onConnect: () => {
+        Net.send({ t: "hello", name: myName() });
+        showOverlay("JOINING TABLE", "Connected — taking a seat…");
+      },
+      onMessage: guestRoute,
+      onClose: () => guestConnLost(),
+      onError: (e) => (room ? netError4(e) : netError(e)),
+    });
+    startHeartbeat();
+  }
+
+  function guestRoute(m) {
+    if (!m || typeof m !== "object") return;
+    if (m.t === "full") {
+      room = null; net = null;
+      lobbyFailed("That table is full or already in play. Double-check the code, or ask for a new one.");
+      return;
+    }
+    // lock in 2v2 the first time a 2v2-only message arrives
+    if (!room && !net && !game && !game4 && MODE_2V2.has(m.t)) {
+      room = { role: "guest", code: joinCode, mySeat: null, seats: null, started: false };
+    }
+    if (room) guestMsg4(m);
+    else netMsg(m);
+  }
+
+  /* guest: the link to the table dropped — they can rejoin with the same code */
+  function guestConnLost() {
+    if (!net && !room) return;                 // already torn down (e.g. via bye)
+    const code = joinCode;
+    net = null; room = null; rivalName = null;
+    game = null; game4 = null;
+    clearTimeout(botTimer);
+    clearEcho();
+    Net.destroy();
+    exitToSplash();
+    showNotice("CONNECTION LOST", code
+      ? `The link to the table dropped. Enter code ${code.toUpperCase()} in JOIN GAME to rejoin.`
+      : "The connection to the table was lost.");
   }
 
   function openTable() {
@@ -1623,43 +1792,61 @@
     showOverlay("PLAY ONLINE", "Summoning a table…");
     Net.host({
       onReady: (code) => {
+        myTableCode = code;
         const url = location.origin + location.pathname + "#join=" + code;
-        showOverlay("YOUR TABLE IS READY", "Waiting for your rival to arrive…", { link: url, hint: true });
+        showOverlay("YOUR TABLE IS READY", "Give your rival this code to join — the cards fly the moment they're in.",
+          { code, link: url });
       },
       onConnect: () => {
         Net.send({ t: "hello", name: myName() });
-        hostBegin();
+        if (game) {
+          // a rival (re)connected to a table already in play — resume them
+          Net.send({ t: "resume", state: Truco.mirror(game.serialize()) });
+          resumeHost1();
+        } else {
+          hostBegin();
+        }
       },
       onMessage: netMsg,
-      onClose: () => netEnded("RIVAL LEFT", "Your rival left the table."),
+      onClose: () => hostRival1Dropped(),
       onError: netError,
     });
   }
 
-  function joinTable(code) {
-    if (!Net.available()) {
-      showNotice("PLAY ONLINE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+  /* 1v1 host: rival dropped — pause and wait for them to rejoin with the code */
+  function hostRival1Dropped() {
+    if (!net || net.role !== "host" || rivalGone) return;
+    if (!game || game.gameOver) {
+      netEnded("RIVAL LEFT", "Your rival left the table.");
       return;
     }
-    showOverlay("JOINING TABLE", "Crossing the gold sea…");
-    Net.join(code, {
-      onConnect: () => {
-        Net.send({ t: "hello", name: myName() });
-        showOverlay("JOINING TABLE", "Connected — waiting for the deal…");
-      },
-      onMessage: netMsg,
-      onClose: () => netEnded("RIVAL LEFT", "Your rival left the table."),
-      onError: netError,
-    });
+    rivalGone = true;
+    showOverlay("RIVAL DISCONNECTED",
+      "Waiting for your rival to rejoin — they can re-enter this code in JOIN GAME.",
+      { code: myTableCode, cancelLabel: "LEAVE TABLE" });
   }
 
-  /* a #join4 link: ask for a name before sitting down */
-  function openJoin4Prompt(code) {
-    showOverlay("JOIN 2v2 TABLE", "You're invited — pick a name and take a seat.");
+  /* 1v1 host: rival is back — drop the pause overlay and repaint the board */
+  function resumeHost1() {
+    rivalGone = false;
+    markRivalSeen();
+    el.onlineOverlay.classList.add("hidden");
+    if (location.hash.startsWith("#join")) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+    repaintStage1("Your rival is back — play on");
+    if (!busy) onIdle();
+  }
+
+  /* a shared #join / #join4 link: prefill the code, ask for a name, then join.
+     (The link still works; the code is the primary way in.) */
+  function openJoinLink(code) {
+    showOverlay("JOIN TABLE", "You're invited — pick a name and sit down.");
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
+    el.joinCode.value = code.toUpperCase();
     el.onlineNamebox.classList.remove("hidden");
-    el.btnJoin2v2.classList.remove("hidden");
-    el.btnJoin2v2.onclick = () => joinTable4(code);
+    el.onlineJoinbox.classList.remove("hidden");
+    el.btnJoinGo.classList.remove("hidden");
   }
 
   /* ---------- rules overlay ---------- */
@@ -1680,7 +1867,8 @@
     <h3>Me voy al mazo</h3>
     <p>Fold your hand and concede the current stake. In the first trick before envido it costs 2 points.</p>
     <h3>Play Online</h3>
-    <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table and gives you a link — <strong>1v1</strong> or <strong>2v2</strong>. Send it to your friends; the cards fly when everyone is seated. There's a table-talk chat, and empty 2v2 seats can be filled with bots.</p>
+    <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table — <strong>1v1</strong> or <strong>2v2</strong> — and shows a short <strong>table code</strong>. Share the code; friends pick <strong>JOIN GAME</strong> and type it in. The cards fly when everyone is seated. There's a table-talk chat, and empty 2v2 seats can be filled with bots.</p>
+    <p><strong>Dropped out?</strong> Just enter the same code again to rejoin — the hand picks up exactly where it left off. (A shareable link still works too.)</p>
     <h3>2v2 Team Rules</h3>
     <p>Seats alternate teams; your partner sits across the table. The highest card wins the trick for its <strong>team</strong> — if the top cards split between teams it's a parda. Envido is declared from the mano around the table (ties favor whoever is closer to mano), and either member of a team may answer the other side's calls. Folding concedes for your whole team.</p>`;
 
@@ -1693,9 +1881,9 @@
 
   el.btnOnline.addEventListener("click", openOnlineMenu);
   el.btnJoinGame.addEventListener("click", openJoinPrompt);
-  el.btnJoinGo.addEventListener("click", joinFromLink);
-  el.joinLink.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); joinFromLink(); }
+  el.btnJoinGo.addEventListener("click", joinFromCode);
+  el.joinCode.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); joinFromCode(); }
   });
   el.btnMode1v1.addEventListener("click", openTable);
   el.btnMode2v2.addEventListener("click", () => { saveName(); openTable4(); });
@@ -1707,16 +1895,27 @@
   });
   el.btnOnlineCancel.addEventListener("click", closeOverlay);
 
-  el.btnCopyLink.addEventListener("click", async () => {
-    const url = el.onlineLink.value;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch (e) {
-      el.onlineLink.select();
-      document.execCommand("copy");
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e2) { /* ignore */ }
+      ta.remove();
     }
+  }
+
+  el.btnCopyCode.addEventListener("click", async () => {
+    await copyText(myTableCode ? myTableCode.toUpperCase() : el.onlineCode.textContent);
+    el.btnCopyCode.textContent = "COPIED ✓";
+    setTimeout(() => { el.btnCopyCode.textContent = "COPY"; }, 1600);
+  });
+
+  el.btnCopyLink.addEventListener("click", async () => {
+    await copyText(el.onlineLink.value);
     el.btnCopyLink.textContent = "COPIED ✓";
-    setTimeout(() => { el.btnCopyLink.textContent = "COPY LINK"; }, 1600);
+    setTimeout(() => { el.btnCopyLink.textContent = "OR COPY A LINK"; }, 1600);
   });
 
   el.btnShareLink.addEventListener("click", () => {
@@ -1758,11 +1957,9 @@
     el.chatInput.value = "";
   });
 
-  // deep links: #join=<code> joins 1v1, #join4=<code> joins a 2v2 table,
-  // #play goes straight to solo
-  const join4Match = location.hash.match(/^#join4=([a-z0-9]+)$/i);
-  const joinMatch = location.hash.match(/^#join=([a-z0-9]+)$/i);
-  if (join4Match) openJoin4Prompt(join4Match[1].toLowerCase());
-  else if (joinMatch) joinTable(joinMatch[1].toLowerCase());
+  // deep links still work: #join=<code> or #join4=<code> prefill the code and
+  // ask for a name (mode is detected on connect); #play goes straight to solo
+  const linkMatch = location.hash.match(/^#join4?=([a-z0-9]+)$/i);
+  if (linkMatch) openJoinLink(linkMatch[1].toLowerCase());
   else if (location.hash === "#play") el.btnStart.click();
 })();

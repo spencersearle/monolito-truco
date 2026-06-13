@@ -277,6 +277,65 @@ body {
   color: rgba(245, 234, 209, .88);
 }
 
+/* table code — the primary share artifact */
+.online-codebox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.online-codelabel {
+  font-family: var(--font-hud);
+  font-weight: 700;
+  letter-spacing: .24em;
+  font-size: .72rem;
+  color: var(--ice);
+}
+
+.online-coderow {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: min(360px, 100%);
+}
+
+.online-code {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(242, 201, 76, .6);
+  background: rgba(4, 10, 28, .72);
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.7rem;
+  letter-spacing: .35em;
+  text-indent: .35em;
+  text-transform: uppercase;
+  text-align: center;
+  box-shadow: inset 0 0 22px rgba(242, 201, 76, .12);
+  user-select: all;
+}
+
+.online-copycode { margin: 0; align-self: stretch; display: flex; align-items: center; }
+
+.online-codehint {
+  color: rgba(245, 234, 209, .7);
+  font-size: .82rem;
+  line-height: 1.45;
+  max-width: 360px;
+}
+
+.online-codeinput {
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
 .online-linkbox {
   display: flex;
   flex-direction: column;
@@ -1318,6 +1377,8 @@ body {
   .online-linkbtns .btn { width: min(260px, 82vw); }
   .online-hint { font-size: .84rem; }
   .online-modes .btn { min-width: 0; width: min(260px, 82vw); }
+  .online-code { font-size: 1.3rem; letter-spacing: .26em; text-indent: .26em; padding: 10px 8px; }
+  .online-codehint { font-size: .78rem; }
   .lobby-seat { padding: 7px 10px; gap: 8px; }
   .lobby-name { font-size: .86rem; }
   .lobby-btn { font-size: .6rem; padding: 5px 9px; }

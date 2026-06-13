@@ -37,11 +37,14 @@ const Net = (() => {
       cb.onConnect();
     });
     c.on("data", (d) => cb.onMessage(d));
-    c.on("close", () => cb.onClose());
-    c.on("error", (e) => cb.onError(e));
+    // a connection that was swapped out by a reconnection stays silent
+    c.on("close", () => { if (c._replaced) return; if (conn === c) conn = null; cb.onClose(); });
+    c.on("error", (e) => { if (c._replaced) return; cb.onError(e); });
   }
 
-  /* create a table: get an id from the broker, wait for one guest */
+  /* create a table: get an id from the broker, accept a guest. A later
+     connection (a rival who dropped and rejoined with the same code) replaces
+     the previous link so play resumes seamlessly — newest valid link wins. */
   function host(cb) {
     const code = randomCode();
     peer = new Peer(PREFIX + code);
@@ -51,11 +54,11 @@ const Net = (() => {
       cb.onReady(code);
     });
     peer.on("connection", (c) => {
-      if (conn) { c.close(); return; } // table is full
+      if (conn) { conn._replaced = true; try { conn.close(); } catch (e) { /* gone */ } conn = null; }
       wire(c, cb);
     });
     peer.on("error", (e) => cb.onError(e));
-    peer.on("disconnected", () => peer && !conn && peer.reconnect());
+    peer.on("disconnected", () => peer && peer.reconnect());
   }
 
   /* join a table by code */

@@ -21,22 +21,24 @@ and tablets.
 - **Ir al mazo** (folding), all five **parda** (tied-trick) resolution cases
 - Rules verified against 5 independent sources — and the **2v2 team rules**
   against 5 more — see [RULES.md](RULES.md)
-- 97 engine tests: `node test_engine.js` (1v1) + `node test_engine4.js` (2v2)
+- 101 engine tests: `node test_engine.js` (1v1) + `node test_engine4.js` (2v2)
 
 ## Play online
 
 Hit **PLAY ONLINE** on the title screen, type your name, and pick a table:
 
-- **1 vs 1** — the game opens a private table and hands you a link. Send it
-  to a friend; the moment they open it, the cards fly.
-- **2 vs 2** — share one link with up to three friends; the lobby seats them
+- **1 vs 1** — the game opens a private table and shows a short **table code**.
+  Tell a friend the code; the moment they're in, the cards fly.
+- **2 vs 2** — share one code with up to three friends; the lobby seats them
   into alternating teams as they arrive. Short of players? Fill any empty
   seat with a **bot** (any human/bot mix that adds up to 4 works). If someone
   drops mid-game, a bot quietly takes over their seat so the hand plays on.
-- **Join from the title screen** — opening a link auto-joins, but you can also
-  hit **JOIN GAME**, paste a link, and sit down. That's the way back in after a
-  dropped connection: in 2v2 you reclaim the bot that's holding your seat and
-  resume the hand already in progress — no new link needed.
+- **Join (or rejoin) by code** — hit **JOIN GAME**, type the table code, and
+  sit down. The same code is the way back in after a dropped connection or even
+  after you exit: the host pauses, you re-enter the code, and the hand picks up
+  **exactly where it left off** — in 1v1 the host streams you a state snapshot;
+  in 2v2 you reclaim the bot holding your seat. No new code needed. (A shareable
+  link still works too, and the mode is detected automatically on connect.)
 - **Table talk** — a built-in chat works in the lobby and at the table. New
   messages pop a toast with the sender's name and a count on the chat icon, in
   both modes.
@@ -51,9 +53,11 @@ Under the hood:
   broadcasts the hands, and every action is replicated. In 2v2 the host is
   authoritative — guests send intents, the host validates, applies, and
   broadcasts, so four screens can never disagree on the order of play
-- A player rejoining a 2v2 game mid-hand gets a full **state snapshot** from
-  the host (`Game4.serialize()` / `restore()`), so they pick up exactly where
-  the bot left off and stay in lockstep from the next action on
+- Rejoin works mid-hand in both modes: the host streams the joiner a full
+  **state snapshot** (`Game.serialize()` + `mirror()` for 1v1, `Game4.serialize()`
+  for 2v2) and they continue in lockstep from the next action. A lightweight
+  heartbeat detects a silently dropped peer within a few seconds, so the host
+  pauses (1v1) or hands the seat to a bot (2v2) almost immediately
 - Fuzz-tested for sync: `node test_multiplayer_sim.js` (200 1v1 games across
   two mirrored engines) and `node test_multiplayer_sim4.js` (200 2v2 games
   across four engines) assert the replicas never diverge
@@ -88,7 +92,7 @@ python3 -m http.server 8000
 | `net.js` | PeerJS transport: 1v1 link + 2v2 star room with host relay |
 | `peerjs.min.js` | Vendored PeerJS 1.5.5 |
 | `ui.js` | Animation queue, presenters (1v1 + 2v2), lobby, chat, game flow |
-| `test_engine.js` | 1v1 rule verification suite (62 tests) |
+| `test_engine.js` | 1v1 rule verification suite (66 tests, incl. snapshot/mirror/restore) |
 | `test_engine4.js` | 2v2 team-rule verification suite (35 tests, incl. snapshot/restore) |
 | `test_multiplayer_sim.js` | Lockstep-replication fuzz test for 1v1 online |
 | `test_multiplayer_sim4.js` | Lockstep fuzz for 2v2: host + 3 guest engines |

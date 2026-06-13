@@ -278,5 +278,57 @@ const playBoth = (g, yi, ai_) => {
   eq(g.gameWinner, "you", "winner recorded");
 }
 
+/* ---- snapshot / mirror / restore (reconnect & rejoin) ---- */
+{
+  const { freshDeal, mirror, other } = Truco;
+
+  // a restored snapshot is byte-identical to its source
+  const g = new Game("you", { you: [C("espadas", 1), C("oros", 7), C("copas", 3)],
+                              ai: [C("bastos", 1), C("espadas", 7), C("copas", 5)] });
+  g.call("you", "Envido");          // leave a call pending mid-hand
+  g.drainEvents();
+  const clone = Game.restore(g.serialize());
+  eq(clone.serialize(), g.serialize(), "restore is byte-identical to source");
+  eq(clone.events.length, 0, "restored game has no queued events");
+
+  // mirroring twice is the identity
+  eq(mirror(mirror(g.serialize())), g.serialize(), "double-mirror is identity");
+
+  // mirrored restore stays in lockstep: 100 games, the guest is rebuilt from
+  // the host snapshot mid-hand and must keep matching through to game over
+  let restores = 0, ok = true;
+  for (let n = 0; n < 100 && ok; n++) {
+    const fixed = freshDeal();
+    const mano = n % 2 === 0 ? "you" : "ai";
+    const host = new Game(mano, fixed);
+    let guest = new Game(other(mano), { you: fixed.ai, ai: fixed.you });
+    host.drainEvents(); guest.drainEvents();
+    let steps = 0;
+    while (!host.gameOver) {
+      if (++steps > 5000) { ok = false; break; }
+      if (host.handOver) {
+        const nx = freshDeal();
+        host.nextHand(nx); guest.nextHand({ you: nx.ai, ai: nx.you });
+        host.drainEvents(); guest.drainEvents();
+        continue;
+      }
+      if (steps % 6 === 0) { guest = Game.restore(mirror(host.serialize())); restores++; }
+      const actor = host.pending ? other(host.pending.caller) : host.toAct;
+      const ag = actor === "you" ? host : guest;
+      const mg = actor === "you" ? guest : host;
+      const legal = ag.legalActions("you");
+      if (!legal.length) { ok = false; break; }
+      const act = legal[Math.floor(Math.random() * legal.length)];
+      if (act === "play") {
+        const i = Math.floor(Math.random() * ag.hands.you.length);
+        ag.playCard("you", i); mg.playCard("ai", i);
+      } else { ag.call("you", act); mg.call("ai", act); }
+      host.drainEvents(); guest.drainEvents();
+      if (JSON.stringify(mirror(host.serialize())) !== JSON.stringify(guest.serialize())) { ok = false; break; }
+    }
+  }
+  eq(ok, true, `reconnect-restore stays in lockstep (${restores} mid-game restores across 100 games)`);
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

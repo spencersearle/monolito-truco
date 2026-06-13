@@ -89,15 +89,23 @@
         <button class="btn btn-gold" id="btn-mode-2v2">2 VS 2</button>
       </div>
       <div class="online-namebox hidden" id="online-joinbox">
-        <label class="online-namelabel" for="join-link">PASTE THE INVITE LINK</label>
-        <input class="online-name" id="join-link" autocomplete="off"
-               spellcheck="false" placeholder="…#join4=abc123">
+        <label class="online-namelabel" for="join-code">TABLE CODE</label>
+        <input class="online-name online-codeinput" id="join-code" maxlength="40" autocomplete="off"
+               spellcheck="false" placeholder="ABC123">
+      </div>
+      <div class="online-codebox hidden" id="online-codebox">
+        <span class="online-codelabel">TABLE CODE</span>
+        <div class="online-coderow">
+          <span class="online-code" id="online-code">------</span>
+          <button class="btn btn-gold online-copycode" id="btn-copy-code">COPY</button>
+        </div>
+        <p class="online-codehint">Share this code — your friend types it into <strong>JOIN GAME</strong> to sit down or rejoin.</p>
       </div>
       <div class="online-linkbox hidden" id="online-linkbox">
         <input class="online-link" id="online-link" readonly aria-label="Invite link">
         <div class="online-linkbtns">
-          <button class="btn btn-gold" id="btn-copy-link">COPY LINK</button>
-          <button class="btn btn-gold hidden" id="btn-share-link">SHARE…</button>
+          <button class="btn btn-ghost" id="btn-copy-link">OR COPY A LINK</button>
+          <button class="btn btn-ghost hidden" id="btn-share-link">SHARE…</button>
         </div>
       </div>
       <div class="lobby-roster hidden" id="lobby-roster"></div>
