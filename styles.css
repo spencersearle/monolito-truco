@@ -562,6 +562,19 @@ body {
   background: rgba(245, 234, 209, .5);
 }
 
+.hud-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.hud-actions-sub {
+  display: flex;
+  gap: 6px;
+}
+
 .exit-btn {
   font-family: var(--font-hud);
   font-weight: 700;
@@ -575,7 +588,6 @@ body {
   background: rgba(10, 26, 58, .5);
   backdrop-filter: blur(6px);
   transition: all .18s ease;
-  align-self: flex-start;
 }
 
 .exit-btn:hover {
@@ -1332,10 +1344,13 @@ body {
   .hud-center { order: 4; width: 100%; }
   .hud-title { display: none; }
   .hud-stake { font-size: .6rem; }
-  .exit-btn {
+  .hud-actions {
     position: absolute;
     top: calc(8px + env(safe-area-inset-top));
     right: 10px;
+    z-index: 5;
+  }
+  .exit-btn {
     padding: 5px 9px;
     font-size: .58rem;
     letter-spacing: .1em;
@@ -1393,14 +1408,10 @@ body {
   .plate-right { right: 4px; top: calc(50% + var(--card-h) * .8); }
   .chat { right: 8px; bottom: 8px; height: min(360px, 55vh); }
   .chat-toggle {
-    position: absolute;
-    top: calc(8px + env(safe-area-inset-top));
-    right: 76px;
     padding: 3px 9px;
     font-size: .85rem;
   }
-  .name-toggle { right: 118px; }
-  .chat-toast, .name-pop { top: calc(44px + env(safe-area-inset-top)); right: 8px; }
+  .chat-toast, .name-pop { top: calc(80px + env(safe-area-inset-top)); right: 8px; }
 
   .endgame-sub { margin-bottom: 24px; }
   .endgame .btn { display: block; margin: 10px auto; width: min(260px, 82vw); }
