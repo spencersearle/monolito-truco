@@ -57,6 +57,7 @@
     chatToastText: $("chat-toast-text"),
     btnName: $("btn-name"), namePanel: $("name-panel"),
     nameInput: $("name-input"), btnNameSave: $("btn-name-save"),
+    btnMute: $("btn-mute"), splashStats: $("splash-stats"),
   };
 
   /* ---------- state ---------- */
@@ -105,6 +106,115 @@
 
   const OPP_NAME = () => (net ? (rivalName || "your rival") : "El Monolito");
   const OPP_CAP = () => (net ? (rivalName || "Your rival") : "El Monolito");
+
+  /* ---------- sound (synthesized via Web Audio — no asset files) ---------- */
+
+  const Sfx = (() => {
+    let ctx = null, master = null;
+    let muted = localStorage.getItem("monolito-muted") === "1";
+
+    function ensure() {
+      if (ctx) return;
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createGain();
+        master.gain.value = 0.5;
+        master.connect(ctx.destination);
+      } catch (e) { ctx = null; }
+    }
+    function unlock() {
+      ensure();
+      if (ctx && ctx.state === "suspended") ctx.resume();
+    }
+
+    // a single enveloped oscillator note
+    function tone({ freq = 440, dur = 0.15, type = "sine", gain = 0.3, slideTo = null, delay = 0 }) {
+      if (muted) return; ensure(); if (!ctx) return;
+      const t0 = ctx.currentTime + delay;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g); g.connect(master);
+      osc.start(t0); osc.stop(t0 + dur + 0.03);
+    }
+    // a short filtered noise burst (card whoosh, chip clink, coins)
+    function noise({ dur = 0.12, gain = 0.2, delay = 0, hp = 800 }) {
+      if (muted) return; ensure(); if (!ctx) return;
+      const t0 = ctx.currentTime + delay;
+      const n = Math.max(1, Math.floor(ctx.sampleRate * dur));
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const filter = ctx.createBiquadFilter(); filter.type = "highpass"; filter.frequency.value = hp;
+      const g = ctx.createGain(); g.gain.value = gain;
+      src.connect(filter); filter.connect(g); g.connect(master);
+      src.start(t0);
+    }
+
+    return {
+      card:      () => noise({ dur: 0.16, gain: 0.22, hp: 1200 }),
+      deal:      () => { for (let i = 0; i < 3; i++) noise({ dur: 0.12, gain: 0.16, hp: 1500, delay: i * 0.09 }); },
+      trickWin:  () => { tone({ freq: 520, dur: 0.1, type: "triangle", gain: 0.22 }); tone({ freq: 784, dur: 0.13, type: "triangle", gain: 0.18, delay: 0.08 }); },
+      trickLose: () => tone({ freq: 233, dur: 0.16, type: "sine", gain: 0.16 }),
+      call:      () => { noise({ dur: 0.07, gain: 0.2, hp: 2600 }); tone({ freq: 660, dur: 0.06, type: "square", gain: 0.08 }); },
+      bigCall:   () => { tone({ freq: 110, dur: 0.55, type: "sawtooth", gain: 0.26 }); tone({ freq: 165, dur: 0.5, type: "sine", gain: 0.16 }); },
+      coins:     () => { for (let i = 0; i < 4; i++) noise({ dur: 0.06, gain: 0.14, hp: 3200, delay: i * 0.05 }); },
+      point:     () => tone({ freq: 587, dur: 0.13, type: "triangle", gain: 0.22, slideTo: 880 }),
+      win:       () => [523, 659, 784, 1047].forEach((f, i) => tone({ freq: f, dur: 0.3, type: "triangle", gain: 0.26, delay: i * 0.12 })),
+      lose:      () => [392, 330, 262].forEach((f, i) => tone({ freq: f, dur: 0.36, type: "sine", gain: 0.2, delay: i * 0.14 })),
+      toggle() { muted = !muted; localStorage.setItem("monolito-muted", muted ? "1" : "0"); if (!muted) unlock(); return muted; },
+      isMuted: () => muted,
+      unlock,
+    };
+  })();
+
+  /* ---------- match stats (solo vs El Monolito, persisted) ---------- */
+
+  const Stats = (() => {
+    const KEY = "monolito-stats";
+    function get() {
+      let s = {};
+      try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { s = {}; }
+      return { wins: s.wins || 0, losses: s.losses || 0, streak: s.streak || 0, best: s.best || 0 };
+    }
+    function record(won) {
+      const s = get();
+      if (won) { s.wins++; s.streak++; if (s.streak > s.best) s.best = s.streak; }
+      else { s.losses++; s.streak = 0; }
+      localStorage.setItem(KEY, JSON.stringify(s));
+      return s;
+    }
+    return { get, record };
+  })();
+
+  /* ---------- El Monolito's voice (solo only — taunts in his bubble) ---------- */
+
+  const TAUNTS = {
+    truco:    ["¿Tenés con qué?", "El Monolito no parpadea.", "Subo. Temblá.", "A ver esas cartas…", "¿Vas a querer?"],
+    envido:   ["Mis números cantan solos.", "El envido es mío.", "Contá… igual perdés.", "Treinta y tres, casi siempre."],
+    winHand:  ["Otra para la piedra.", "Así se juega al truco.", "¿Aprendiste algo?", "El Monolito no perdona.", "Previsible."],
+    youFold:  ["Sabia decisión.", "Al mazo, como debe ser.", "La piedra siempre gana.", "Huir también es jugar."],
+    winGame:  ["El Monolito permanece. Siempre.", "Treinta. Yo no me muevo.", "La piedra no se rompe.", "¿Otra derrota?"],
+    loseGame: ["Hoy… la piedra cede.", "Disfrutá. No se repetirá.", "Hmph. Suerte de principiante.", "Volveré a ser de piedra."],
+  };
+  const pickTaunt = (kind) => {
+    const pool = TAUNTS[kind];
+    return pool ? pool[Math.floor(Math.random() * pool.length)] : "";
+  };
+  // show a taunt in El Monolito's bubble; solo play only, with a chance to stay quiet.
+  // queued after the triggering event, which supplies the pause before he speaks.
+  function taunt(kind, chance = 0.5, hold = 2200) {
+    if (net) return;                       // El Monolito only exists vs the AI
+    if (Math.random() > chance) return;
+    const line = pickTaunt(kind);
+    if (line) enqueue(() => bubbleAt("top", line, hold), 350);
+  }
 
   /* 2v2 helpers: absolute seat -> table position relative to my seat */
   const seatPos = (seat) => ["you", "left", "top", "right"][(seat - room.mySeat + 4) % 4];
@@ -322,6 +432,7 @@
           renderPips();
           renderStake();
           renderHands(true);
+          Sfx.deal();
           msg(ev.mano === "you" ? "New hand — you are mano, you lead" : `New hand — ${OPP_NAME()} is mano`);
         }, 700);
         break;
@@ -333,6 +444,7 @@
           c.classList.add("thrown");
           row.appendChild(c);
           renderHands(false);
+          Sfx.card();
         }, 650);
         break;
 
@@ -350,24 +462,33 @@
           if (t.winner === "you") { yCard?.classList.add("trick-win"); aCard?.classList.add("trick-lose"); }
           else if (t.winner === "ai") { aCard?.classList.add("trick-win"); yCard?.classList.add("trick-lose"); }
           renderPips();
+          if (t.winner === "you") Sfx.trickWin();
+          else if (t.winner === "ai") Sfx.trickLose();
           msg(t.winner === "tie" ? "¡Parda! — tied trick" :
               t.winner === "you" ? "You take the trick" : `${OPP_CAP()} takes the trick`);
         }, 1300);
         enqueue(() => clearBattle(), 150);
         break;
 
-      case "call":
+      case "call": {
+        const big = ["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name);
         enqueue(() => {
           const text = CALL_TEXT[ev.name] || ev.name;
           bubble(ev.player, text);
-          if (["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name)) flash(text);
+          if (big) { flash(text); Sfx.bigCall(); } else { Sfx.call(); }
           msg(ev.player === "you" ? `Waiting for ${OPP_NAME()}…` : `${OPP_CAP()} calls — your answer?`);
-        }, ["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name) ? 1400 : 900);
+        }, big ? 1400 : 900);
+        if (ev.player === "ai") {
+          if (["Truco", "Retruco", "Vale Cuatro"].includes(ev.name)) taunt("truco", 0.5);
+          else if (["Envido", "Real Envido", "Falta Envido"].includes(ev.name)) taunt("envido", 0.4);
+        }
         break;
+      }
 
       case "response":
         enqueue(() => {
           bubble(ev.player, ev.accepted ? "QUIERO" : "NO QUIERO");
+          Sfx.call();
         }, 900);
         break;
 
@@ -381,6 +502,7 @@
         enqueue(() => {
           if (ev.winner === pie) bubble(pie, `${ev.values[pie]} SON MEJORES`);
           else bubble(pie, "SON BUENAS");
+          Sfx.coins();
         }, 1300);
         enqueue(() => {
           msg(ev.winner === "you"
@@ -403,11 +525,12 @@
         break;
 
       case "mazo":
-        enqueue(() => bubble(ev.player, "ME VOY AL MAZO"), 1100);
+        enqueue(() => { bubble(ev.player, "ME VOY AL MAZO"); Sfx.call(); }, 1100);
+        if (ev.player === "you") taunt("youFold", 0.5);
         break;
 
       case "score":
-        enqueue(() => renderScores(), 350);
+        enqueue(() => { renderScores(); Sfx.point(); }, 350);
         break;
 
       case "hand-end":
@@ -417,6 +540,7 @@
             ? `You win the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`
             : `${OPP_CAP()} wins the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`);
         }, 1900);
+        if (ev.winner === "ai" && !game.gameOver) taunt("winHand", 0.4);
         if (!game.gameOver) {
           if (!net) {
             enqueue(() => { game.nextHand(); sync(); }, 0);
@@ -500,12 +624,23 @@
   function showEndgame(winner) {
     const div = document.createElement("div");
     div.className = "endgame";
-    const title = winner === "you" ? "YOU WIN"
+    const won = winner === "you";
+    won ? Sfx.win() : Sfx.lose();
+    const title = won ? "YOU WIN"
       : net ? `${esc((rivalName || "YOUR RIVAL").toUpperCase())} WINS` : "EL MONOLITO WINS";
+    // solo vs El Monolito: record the result and let him have the last word
+    let extra = "";
+    if (!net) {
+      const s = Stats.record(won);
+      const streakTxt = s.streak > 1 ? ` · 🔥 ${s.streak} in a row` : "";
+      extra = `<div class="endgame-taunt">“${esc(pickTaunt(won ? "loseGame" : "winGame"))}”</div>
+        <div class="endgame-stats">${s.wins}W — ${s.losses}L${streakTxt} · best streak ${s.best}</div>`;
+    }
     div.innerHTML = `
       <div class="endgame-inner">
         <div class="endgame-title">${title}</div>
         <div class="endgame-sub">${game.scores.you} — ${game.scores.ai}</div>
+        ${extra}
         <button class="btn btn-gold" id="btn-again">PLAY AGAIN</button>
       </div>`;
     document.body.appendChild(div);
@@ -605,6 +740,7 @@
           renderStake4();
           renderHands4(true);
           renderPlates4();
+          Sfx.deal();
           msg(ev.mano === room.mySeat
             ? "New hand — you are mano, you lead"
             : `New hand — ${seatName(ev.mano)} is mano`);
@@ -619,6 +755,7 @@
           slot.appendChild(c);
           renderHands4(false);
           renderPlates4();
+          Sfx.card();
         }, 650);
         break;
 
@@ -638,6 +775,9 @@
             card.classList.add(seat === ev.winnerSeat ? "trick-win" : "trick-lose");
           }
           renderPips4();
+          if (ev.winnerSeat !== null) {
+            (ev.winnerSeat % 2 === myTeam()) ? Sfx.trickWin() : Sfx.trickLose();
+          }
           msg(ev.winner === "tie" ? "¡Parda! — tied trick" :
               ev.winnerSeat === room.mySeat ? "You take the trick" :
               `${seatName(ev.winnerSeat)} takes the trick`);
@@ -649,7 +789,7 @@
         enqueue(() => {
           const text = CALL_TEXT[ev.name] || ev.name;
           bubbleAt(seatPos(ev.seat), text);
-          if (["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name)) flash(text);
+          if (["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name)) { flash(text); Sfx.bigCall(); } else { Sfx.call(); }
           const mustAnswer = game4.pending && game4.legalActions(room.mySeat).length;
           msg(ev.seat === room.mySeat ? "Waiting for an answer…" :
               mustAnswer ? `${seatName(ev.seat)} calls — your side answers` :
@@ -662,6 +802,7 @@
         enqueue(() => {
           bubbleAt(seatPos(ev.seat), ev.accepted ? "QUIERO" : "NO QUIERO");
           renderPlates4();
+          Sfx.call();
         }, 900);
         break;
 
@@ -684,6 +825,7 @@
           }
         }
         enqueue(() => {
+          Sfx.coins();
           msg(ev.winnerTeam === myTeam()
             ? `Your team wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`
             : `${seatName(ev.winnerSeat)}'s team wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`);
@@ -704,11 +846,11 @@
         break;
 
       case "mazo":
-        enqueue(() => bubbleAt(seatPos(ev.seat), "ME VOY AL MAZO"), 1100);
+        enqueue(() => { bubbleAt(seatPos(ev.seat), "ME VOY AL MAZO"); Sfx.call(); }, 1100);
         break;
 
       case "score":
-        enqueue(() => renderScores4(), 350);
+        enqueue(() => { renderScores4(); Sfx.point(); }, 350);
         break;
 
       case "hand-end":
@@ -860,6 +1002,7 @@
   function showEndgame4(winnerTeam) {
     const div = document.createElement("div");
     div.className = "endgame";
+    (winnerTeam === myTeam()) ? Sfx.win() : Sfx.lose();
     const mates = [winnerTeam, winnerTeam + 2]
       .map((s) => (s === room.mySeat ? "YOU" : esc(room.seats[s].name.toUpperCase())));
     const title = winnerTeam === myTeam() ? "YOUR TEAM WINS" : `${mates.join(" & ")} WIN`;
@@ -1459,6 +1602,7 @@
     el.btnName.classList.add("hidden");
     closeNamePanel();
     resetChat();
+    renderSplashStats();
     el.splash.classList.remove("gone");
   }
 
@@ -1873,6 +2017,31 @@
     <p>Seats alternate teams; your partner sits across the table. The highest card wins the trick for its <strong>team</strong> — if the top cards split between teams it's a parda. Envido is declared from the mano around the table (ties favor whoever is closer to mano), and either member of a team may answer the other side's calls. Folding concedes for your whole team.</p>`;
 
   /* ---------- boot ---------- */
+
+  function refreshMute() {
+    el.btnMute.textContent = Sfx.isMuted() ? "🔇" : "🔊";
+    el.btnMute.title = Sfx.isMuted() ? "Sound off — tap to enable" : "Sound on — tap to mute";
+  }
+  el.btnMute.addEventListener("click", () => { Sfx.toggle(); refreshMute(); });
+  refreshMute();
+
+  function renderSplashStats() {
+    const s = Stats.get();
+    if (s.wins + s.losses === 0) { el.splashStats.classList.add("hidden"); return; }
+    const streakTxt = s.streak > 1 ? ` · 🔥 ${s.streak}` : "";
+    el.splashStats.textContent = `vs El Monolito: ${s.wins}W — ${s.losses}L${streakTxt} · best ${s.best}`;
+    el.splashStats.classList.remove("hidden");
+  }
+  renderSplashStats();
+
+  // browsers gate audio behind a user gesture: resume the context on first input
+  const unlockAudio = () => {
+    Sfx.unlock();
+    window.removeEventListener("pointerdown", unlockAudio);
+    window.removeEventListener("keydown", unlockAudio);
+  };
+  window.addEventListener("pointerdown", unlockAudio);
+  window.addEventListener("keydown", unlockAudio);
 
   el.btnStart.addEventListener("click", () => {
     enterStage();
