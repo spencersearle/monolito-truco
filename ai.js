@@ -6,7 +6,7 @@
 
 const TrucoAI = (() => {
 
-  const { power, envidoValue } = Truco;
+  const { power, envidoValue, florValue } = Truco;
 
   const rand = () => Math.random();
 
@@ -55,13 +55,20 @@ const TrucoAI = (() => {
 
     /* --- responding to a pending call --- */
     if (game.pending && game.pending.caller === "you") {
+      if (game.pending.kind === "flor") return respondFlor(game, legal);
       if (game.pending.kind === "envido") {
+        // flor beats the envido — declare it if we have it
+        if (legal.includes("Flor")) return { action: "Flor" };
         return respondEnvido(game, legal, env);
       }
+      if (legal.includes("Flor")) return { action: "Flor" }; // flor over a first-trick truco
       return respondTruco(game, legal, str, tricksWon, tricksLost);
     }
 
     /* --- own turn: maybe call, else play --- */
+
+    // flor is (almost) free points — always declare it when held
+    if (legal.includes("Flor")) return { action: "Flor" };
 
     // envido calls (window open only in trick 1 before playing; chain opens with plain Envido)
     if (legal.includes("Envido")) {
@@ -83,6 +90,18 @@ const TrucoAI = (() => {
 
     /* card play */
     return { action: "play", index: chooseCard(game, hand) };
+  }
+
+  /* both sides have flor: raise with a monster, otherwise compare; only back
+     down ("me achico") against a big raise with a weak flor */
+  function respondFlor(game, legal) {
+    const fv = florValue(game.initialHands.ai);
+    const last = game.pending.chain[game.pending.chain.length - 1];
+    if (legal.includes("Contraflor al Resto") && fv >= 35 && rand() < 0.4) return { action: "Contraflor al Resto" };
+    if (legal.includes("Contraflor") && fv >= 32 && rand() < 0.5) return { action: "Contraflor" };
+    if (last === "flor") return { action: "quiero" };                 // base comparison: always take it
+    if (last === "contraflor") return fv >= 27 || rand() < 0.5 ? { action: "quiero" } : { action: "no-quiero" };
+    return fv >= 31 ? { action: "quiero" } : { action: "no-quiero" }; // al resto: stay only with a strong flor
   }
 
   function respondEnvido(game, legal, env) {

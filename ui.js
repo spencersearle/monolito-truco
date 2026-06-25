@@ -62,6 +62,7 @@
     btnSoloLocal: $("btn-solo-local"), btnSoloCancel: $("btn-solo-cancel"),
     passgate: $("passgate"), passgateTitle: $("passgate-title"), passgateGo: $("passgate-go"),
     splashTag: $("splash-tag"), langToggle: $("lang-toggle"),
+    btnFlorSolo: $("btn-flor-solo"), btnFlorOnline: $("btn-flor-online"),
   };
 
   /* ---------- i18n (English / Spanish) ---------- */
@@ -81,6 +82,7 @@
       soloHint: "Pass & play hands one device back and forth between two players.",
       passSub: "Pass the device over — your cards are hidden until you tap.",
       ready: "I'M READY",
+      florToggle: (on) => `FLOR: ${on ? "ON" : "OFF"}`,
       // online chrome
       yourName: "YOUR NAME", tableCode: "TABLE CODE", copy: "COPY", copied: "COPIED ✓",
       orCopyLink: "OR COPY A LINK", share: "SHARE…", startGame: "START GAME",
@@ -122,6 +124,13 @@
       whyFold: " (fold)", whyNoQuiero: " (no quiero)",
       youWinHand: (n, w) => `You win the hand — ${n} ${PT(n)}${w}`,
       oppWinsHand: (o, n, w) => `${o} wins the hand — ${n} ${PT(n)}${w}`,
+      // flor
+      oppFlor: (o) => `${o} sings flor — your answer?`,
+      florAnnul: "¡La flor mata al envido! — the envido is set aside",
+      youWinFlor: (n) => `You win the flor — ${n} ${PT(n)}`,
+      oppWinsFlor: (o, n) => `${o} wins the flor — ${n} ${PT(n)}`,
+      florDeclinedYou: (n) => `Your rival backs down — you score ${n} ${PT(n)}`,
+      florDeclinedOpp: (o, n) => `You back down — ${n} ${PT(n)} to ${o}`,
       // 2v2 play-by-play
       newHandYouMano4: "New hand — you are mano, you lead",
       newHandMano4: (n) => `New hand — ${n} is mano`,
@@ -154,6 +163,7 @@
       soloHint: "Pasar y jugar: un solo dispositivo que va y viene entre dos jugadores.",
       passSub: "Pasá el dispositivo — tus cartas quedan ocultas hasta que toques.",
       ready: "LISTO",
+      florToggle: (on) => `CON FLOR: ${on ? "SÍ" : "NO"}`,
       yourName: "TU NOMBRE", tableCode: "CÓDIGO DE MESA", copy: "COPIAR", copied: "COPIADO ✓",
       orCopyLink: "O COPIAR UN ENLACE", share: "COMPARTIR…", startGame: "EMPEZAR",
       joinTable: "ENTRAR", cancel: "CANCELAR", editName: "✎ CAMBIAR NOMBRE",
@@ -191,6 +201,12 @@
       whyFold: " (al mazo)", whyNoQuiero: " (no quiero)",
       youWinHand: (n, w) => `Ganás la mano — ${n} ${PT(n)}${w}`,
       oppWinsHand: (o, n, w) => `${o} gana la mano — ${n} ${PT(n)}${w}`,
+      oppFlor: (o) => `${o} canta flor — ¿qué hacés?`,
+      florAnnul: "¡La flor mata al envido! — el envido queda anulado",
+      youWinFlor: (n) => `Ganás la flor — ${n} ${PT(n)}`,
+      oppWinsFlor: (o, n) => `${o} gana la flor — ${n} ${PT(n)}`,
+      florDeclinedYou: (n) => `Tu rival se achica — sumás ${n} ${PT(n)}`,
+      florDeclinedOpp: (o, n) => `Te achicás — ${n} ${PT(n)} para ${o}`,
       newHandYouMano4: "Mano nueva — sos mano, vos abrís",
       newHandMano4: (n) => `Mano nueva — ${n} es mano`,
       seatThinking: (n) => `${n} está pensando…`,
@@ -245,6 +261,7 @@
   let local2 = false;          // solo: pass-and-play (two humans hot-seat on one device)
   let controller = "you";      // local2: which seat's cards are revealed/playable right now
   let botName = "El Monolito"; // solo vs bot: the AI opponent's name this game
+  let florOn = localStorage.getItem("monolito-flor") === "1"; // optional "con flor" variant (1v1/solo)
   let rivalName = null;        // 1v1 online rival's name
   let pendingDeal = null;      // 1v1 guest: next hand received mid-animation
   let rivalGone = false;       // 1v1 host: rival dropped, paused waiting for rejoin
@@ -465,13 +482,19 @@
   const CALL_TEXT = {
     "Envido": "¡ENVIDO!", "Real Envido": "¡REAL ENVIDO!", "Falta Envido": "¡FALTA ENVIDO!",
     "Truco": "¡TRUCO!", "Retruco": "¡RETRUCO!", "Vale Cuatro": "¡VALE CUATRO!",
+    "Flor": "¡FLOR!", "Contraflor": "¡CONTRAFLOR!", "Contraflor al Resto": "¡CONTRAFLOR AL RESTO!",
   };
 
   const CHIP_LABELS = {
     "quiero": "QUIERO", "no-quiero": "NO QUIERO", "mazo": "ME VOY AL MAZO",
     "Envido": "ENVIDO", "Real Envido": "REAL ENVIDO", "Falta Envido": "FALTA ENVIDO",
     "Truco": "¡TRUCO!", "Retruco": "¡RETRUCO!", "Vale Cuatro": "¡VALE CUATRO!",
+    "Flor": "¡FLOR!", "Contraflor": "CONTRAFLOR", "Contraflor al Resto": "CONTRAFLOR AL RESTO",
   };
+
+  // calls that get the big flash + a louder treatment
+  const BIG_CALLS = ["Truco", "Retruco", "Vale Cuatro", "Falta Envido",
+    "Flor", "Contraflor", "Contraflor al Resto"];
 
   function renderChipButtons(legal, onPick) {
     el.dockButtons.innerHTML = "";
@@ -592,12 +615,14 @@
         break;
 
       case "call": {
-        const big = ["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name);
+        const big = BIG_CALLS.includes(ev.name);
+        const isFlorCall = ["Flor", "Contraflor", "Contraflor al Resto"].includes(ev.name);
         enqueue(() => {
           const text = CALL_TEXT[ev.name] || ev.name;
           bubble(ev.player, text);
           if (big) flash(text);
-          msg(ev.player === "you" ? t("waitingFor", OPP_NAME()) : t("oppCalls", OPP_CAP()));
+          msg(ev.player === "you" ? t("waitingFor", OPP_NAME())
+            : isFlorCall ? t("oppFlor", OPP_CAP()) : t("oppCalls", OPP_CAP()));
         }, big ? 1400 : 900);
         if (ev.player === "ai") {
           if (["Truco", "Retruco", "Vale Cuatro"].includes(ev.name)) taunt("truco", 0.5);
@@ -636,6 +661,30 @@
           msg(ev.caller === "you"
             ? t("declinedYouScore", ev.points)
             : t("youDeclinedOppScores", OPP_NAME(), ev.points));
+        }, 1000);
+        break;
+
+      case "flor-annul":
+        enqueue(() => msg(t("florAnnul")), 800);
+        break;
+
+      case "flor-result": {
+        const mano = ev.mano, pie = Truco.other(ev.mano);
+        if (ev.contested) {
+          enqueue(() => bubble(mano, `FLOR ${ev.values[mano]}`), 1100);
+          enqueue(() => bubble(pie, `FLOR ${ev.values[pie]}`), 1300);
+        }
+        enqueue(() => {
+          msg(ev.winner === "you" ? t("youWinFlor", ev.points) : t("oppWinsFlor", OPP_CAP(), ev.points));
+        }, 1100);
+        break;
+      }
+
+      case "flor-declined":
+        enqueue(() => {
+          msg(ev.caller === "you"
+            ? t("florDeclinedYou", ev.points)
+            : t("florDeclinedOpp", OPP_NAME(), ev.points));
         }, 1000);
         break;
 
@@ -1761,7 +1810,7 @@
     leaveNet4();
     resetChat();
     local2 = false;
-    game = new Truco.Game();
+    game = new Truco.Game(undefined, undefined, florOn);
     queue = [];
     busy = false;
     renderScores();
@@ -1775,7 +1824,7 @@
     resetChat();
     local2 = true;
     controller = null;            // force a pass-gate before the first turn
-    game = new Truco.Game();
+    game = new Truco.Game(undefined, undefined, florOn);
     queue = [];
     busy = false;
     el.labelYou.textContent = t("player1");
@@ -1828,11 +1877,11 @@
 
   /* ---------- online play (1v1) ---------- */
 
-  function beginNet(role, manoSeat, hands) {
+  function beginNet(role, manoSeat, hands, flor) {
     net = { role };
     game4 = null;
     pendingDeal = null;
-    game = new Truco.Game(manoSeat, hands);
+    game = new Truco.Game(manoSeat, hands, flor);
     queue = [];
     busy = false;
     aiThinking = false;
@@ -1884,8 +1933,9 @@
       t: "start",
       mano: mano === "you" ? "host" : "guest",
       hands: { host: fixed.you, guest: fixed.ai },
+      flor: florOn,
     });
-    beginNet("host", mano, fixed);
+    beginNet("host", mano, fixed, florOn);
   }
 
   function applyDeal(hands) {
@@ -1920,7 +1970,7 @@
       case "start": // first game, or a host-initiated rematch
         document.querySelector(".endgame")?.remove();
         beginNet("guest", m.mano === "guest" ? "you" : "ai",
-          { you: m.hands.guest, ai: m.hands.host });
+          { you: m.hands.guest, ai: m.hands.host }, !!m.flor);
         break;
       case "resume": // joining a 1v1 table already in play (rejoin / substitute)
         document.querySelector(".endgame")?.remove();
@@ -2231,6 +2281,9 @@
     <p>Lying is legal and expected. Call truco with garbage. Decline nothing. Trust no one — especially El Monolito.</p>
     <h3>Me voy al mazo</h3>
     <p>Fold your hand and concede the current stake. In the first trick before envido it costs 2 points.</p>
+    <h3>Flor (optional)</h3>
+    <p>Turn on <strong>FLOR</strong> before a game to play "con flor". If your three cards are the <strong>same suit</strong> you have a flor, worth <strong>20 + the pips</strong> (figures count 0, so 20–38). You can only declare it in the first trick, and only if you actually hold it — flor also <strong>beats the envido</strong> (it's set aside).</p>
+    <p>An uncontested flor scores <strong>3</strong>. If both sides have flor you compare (higher wins, ties to the mano): <strong>Contraflor</strong> raises it to 6 (decline = 4 to the caller), and <strong>Contraflor al Resto</strong> bets the game.</p>
     <h3>Play Online</h3>
     <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table — <strong>1v1</strong> or <strong>2v2</strong> — and shows a short <strong>table code</strong>. Share the code; friends pick <strong>JOIN GAME</strong> and type it in. The cards fly when everyone is seated. There's a table-talk chat, and empty 2v2 seats can be filled with bots.</p>
     <p><strong>Dropped out?</strong> Just enter the same code again to rejoin — the hand picks up exactly where it left off. (A shareable link still works too.)</p>
@@ -2251,6 +2304,9 @@
     <p>Mentir es legal y esperado. Cantá truco con cualquier cosa. No quieras nada. No confíes en nadie — y menos en El Monolito.</p>
     <h3>Me voy al mazo</h3>
     <p>Abandonás la mano y entregás lo que está en juego. En la primera baza, antes del envido, cuesta 2 puntos.</p>
+    <h3>Flor (opcional)</h3>
+    <p>Activá <strong>FLOR</strong> antes de una partida para jugar "con flor". Si tus tres cartas son del <strong>mismo palo</strong> tenés flor, que vale <strong>20 + los tantos</strong> (las figuras cuentan 0, así que 20–38). Solo se canta en la primera baza, y solo si la tenés de verdad — la flor además <strong>mata al envido</strong> (queda anulado).</p>
+    <p>La flor sin rival vale <strong>3</strong>. Si los dos tienen flor se compara (gana la más alta, los empates a la mano): <strong>Contraflor</strong> la sube a 6 (si no se quiere, 4 para el que cantó), y <strong>Contraflor al Resto</strong> apuesta el chico.</p>
     <h3>Jugar online</h3>
     <p>Desde la portada, <strong>JUGAR ONLINE</strong> abre una mesa privada — <strong>1v1</strong> o <strong>2v2</strong> — y muestra un <strong>código de mesa</strong> corto. Compartí el código; tus amigos eligen <strong>ENTRAR</strong> y lo escriben. Las cartas vuelan cuando están todos sentados. Hay charla de mesa, y los asientos 2v2 vacíos se pueden llenar con bots.</p>
     <p><strong>¿Te desconectaste?</strong> Volvé a ingresar el mismo código para reincorporarte — la mano sigue justo donde la dejaste. (El enlace para compartir también sirve.)</p>
@@ -2305,6 +2361,15 @@
     el.chatInput.placeholder = t("sayThis");
     el.onlineName.placeholder = t("playerPH");
     el.nameInput.placeholder = t("playerPH");
+    renderFlorToggles();
+  }
+
+  function renderFlorToggles() {
+    const label = t("florToggle", florOn);
+    for (const b of [el.btnFlorSolo, el.btnFlorOnline]) {
+      b.textContent = label;
+      b.classList.toggle("flor-on", florOn);
+    }
   }
 
   function renderSplashStats() {
@@ -2323,6 +2388,14 @@
     applyLang();
     renderSplashStats();
   });
+
+  const toggleFlor = () => {
+    florOn = !florOn;
+    localStorage.setItem("monolito-flor", florOn ? "1" : "0");
+    renderFlorToggles();
+  };
+  el.btnFlorSolo.addEventListener("click", toggleFlor);
+  el.btnFlorOnline.addEventListener("click", toggleFlor);
 
   el.btnStart.addEventListener("click", () => el.soloOverlay.classList.remove("hidden"));
   el.btnSoloCancel.addEventListener("click", () => el.soloOverlay.classList.add("hidden"));

@@ -330,5 +330,119 @@ const playBoth = (g, yi, ai_) => {
   eq(ok, true, `reconnect-restore stays in lockstep (${restores} mid-game restores across 100 games)`);
 }
 
+/* ============================================================
+   Flor (optional "con flor" variant)
+   ============================================================ */
+
+const { florValue, isFlor } = Truco;
+
+function florRig(youHand, aiHand, mano = "you") {
+  const g = rig(youHand, aiHand, mano);
+  g.flor = true;
+  g.florResolved = false;
+  return g;
+}
+// three of espadas (1,7,3 -> all same suit) => flor; value 20+1+7+3 = 31
+const FLOR_HI = [C("espadas", 7), C("espadas", 6), C("espadas", 5)];   // 20+7+6+5 = 38 (max)
+const FLOR_MID = [C("espadas", 1), C("espadas", 7), C("espadas", 3)];  // 20+1+7+3 = 31
+const FLOR_LO = [C("oros", 12), C("oros", 11), C("oros", 10)];         // 20+0+0+0 = 20 (min)
+const NOFLOR = [C("espadas", 7), C("oros", 6), C("copas", 5)];         // mixed suits
+
+eq(isFlor(FLOR_HI), true, "isFlor: three of a suit");
+eq(isFlor(NOFLOR), false, "isFlor: mixed suits");
+eq(florValue(FLOR_HI), 38, "flor value max 38 (7+6+5)");
+eq(florValue(FLOR_LO), 20, "flor value min 20 (three figures)");
+eq(florValue(FLOR_MID), 31, "flor value 31 (1+7+3)");
+
+// only a player holding three same-suit cards is offered Flor
+{
+  const g = florRig(FLOR_MID, NOFLOR, "you");
+  eq(g.legalActions("you").includes("Flor"), true, "flor offered when you hold three of a suit");
+  eq(g.legalActions("you").includes("Envido"), false, "envido suppressed for the flor-holder");
+}
+{
+  const g = florRig(NOFLOR, FLOR_MID, "you");
+  eq(g.legalActions("you").includes("Flor"), false, "flor NOT offered without three of a suit");
+  eq(g.legalActions("you").includes("Envido"), true, "envido offered to a non-flor hand");
+}
+{
+  const g = rig(FLOR_MID, NOFLOR, "you"); // flor disabled
+  eq(g.legalActions("you").includes("Flor"), false, "flor never offered when the variant is off");
+}
+
+// uncontested flor scores 3 straight, and forecloses envido
+{
+  const g = florRig(FLOR_MID, NOFLOR, "you");
+  g.call("you", "Flor");
+  eq(g.scores.you, 3, "uncontested flor scores 3");
+  eq(g.florResolved, true, "flor marked resolved");
+  eq(g.legalActions("you").includes("Envido"), false, "no envido after flor");
+}
+
+// both have flor, both quiero at base -> higher flor wins 3 (mano breaks ties)
+{
+  const g = florRig(FLOR_MID, FLOR_HI, "you"); // ai 38 > you 31
+  g.call("you", "Flor");      // you declare
+  g.call("ai", "quiero");     // con flor quiero -> compare
+  eq(g.scores.ai, 3, "higher flor wins the base 3");
+  eq(g.scores.you, 0, "lower flor scores nothing");
+}
+{
+  const a = [C("espadas", 7), C("espadas", 6), C("espadas", 4)];          // 37
+  const g2 = florRig(a, [C("oros", 7), C("oros", 6), C("oros", 4)], "ai"); // both 37, mano=ai
+  g2.call("ai", "Flor"); g2.call("you", "quiero");
+  eq(g2.scores.ai, 3, "flor tie favors the mano");
+}
+
+// contraflor accepted -> winner gets 6
+{
+  const g = florRig(FLOR_HI, FLOR_MID, "you"); // you 38 > ai 31
+  g.call("you", "Flor");
+  g.call("ai", "Contraflor");
+  g.call("you", "quiero");
+  eq(g.scores.you, 6, "contraflor accepted pays 6 to the higher flor");
+}
+
+// contraflor declined ("me achico") -> the contraflor caller scores 4
+{
+  const g = florRig(FLOR_HI, FLOR_MID, "you");
+  g.call("you", "Flor");
+  g.call("ai", "Contraflor");
+  g.call("you", "no-quiero");      // you back down
+  eq(g.scores.ai, 4, "declining contraflor pays the caller 4");
+  eq(g.scores.you, 0, "decliner scores nothing");
+}
+
+// contraflor al resto accepted -> higher flor wins the game
+{
+  const g = florRig(FLOR_HI, FLOR_MID, "you"); // you higher
+  g.call("you", "Flor");
+  g.call("ai", "Contraflor al Resto");
+  g.call("you", "quiero");
+  eq(g.gameOver, true, "contraflor al resto accepted ends the game");
+  eq(g.gameWinner, "you", "the higher flor wins the resto");
+}
+
+// flor annuls a pending envido (la flor mata al envido)
+{
+  const g = florRig(NOFLOR, FLOR_MID, "you"); // you no flor, ai has flor
+  g.call("you", "Envido");           // you open envido
+  eq(g.legalActions("ai").includes("Flor"), true, "flor offered in response to envido");
+  g.call("ai", "Flor");              // ai declares flor -> annuls envido
+  eq(g.scores.ai, 3, "flor annuls the envido and scores 3");
+  eq(g.envidoResolved, false, "envido never resolved (it was annulled)");
+}
+
+// flor state survives serialize/restore
+{
+  const g = florRig(FLOR_MID, FLOR_HI, "you");
+  g.call("you", "Flor");             // pending flor
+  const r = Truco.Game.restore(g.serialize());
+  eq(r.flor, true, "restored game keeps flor enabled");
+  eq(JSON.stringify(r.pending), JSON.stringify(g.pending), "restored pending flor matches");
+  r.call("ai", "quiero");
+  eq(r.scores.ai, 3, "restored flor resolves correctly");
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

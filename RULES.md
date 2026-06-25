@@ -103,9 +103,27 @@ Called on your turn or in response to a pending call. Only the side that said
 - Otherwise: opponent scores the current truco stake (1/2/3/4).
 - Folding with a call pending counts as **no quiero** to that call.
 
-## 9. Flor
+## 9. Flor (optional variant — 1v1)
 
-Not implemented (standard for 2-player, "sin flor").
+Off by default; an opt-in toggle plays "con flor". Verified against the
+sources below (point values follow the common Río de la Plata ruleset).
+
+- **Flor** — holding all **three cards of the same suit**. Value = **20 + the
+  pips** of the three cards (figures 10/11/12 count 0), so **20** (three figures)
+  to **38** (7+6+5).
+- Declared **only in the first trick, before that player has played**, and only
+  by a player who actually holds it. **Flor beats the envido** ("la flor mata al
+  envido") — declaring flor annuls a pending/available envido. It also sets aside
+  a first-trick Truco call.
+- **Uncontested** (only one side has flor): **3 points**, automatically.
+- **Both sides have flor:** the higher flor wins (ties to the **mano**).
+  - Settling at plain Flor (con flor quiero): **3** to the higher flor.
+  - **Contraflor** — accepted: **6** to the higher flor; declined ("con flor me
+    achico"): **4** to the player who called Contraflor.
+  - **Contraflor al Resto** — accepted: the higher flor **wins the game** (falta-
+    style); declined: **6** to the caller.
+- Implemented for 1v1 / solo only; the 2v2 engine is "sin flor". Verified by the
+  Flor section of `test_engine.js`.
 
 ## 10. Game End
 
@@ -156,6 +174,11 @@ table). All scoring is team-level; first team to 30 wins.
 3. [Envido y Truco — rules](https://www.envidoytruco.com/en/rules/truco-argentino)
 4. [Ludoteka — Truco argentino](https://www.ludoteka.com/games/truco-argentino/rules)
 5. [Torofun — Truco rules](https://torofun.com/en/truco/rules)
+
+Flor variant (§9) additionally cross-checked against:
+[Live Argentina — Reglamento del Truco](https://www.liveargentina.com/costumbres/reglamentodeltruco.php),
+[laps4 — Cómo se juega al truco con flor](https://www.laps4.com/preguntas-y-respuestas/como-se-juega-al-truco-con-flor),
+[Wikipedia — Truco argentino (La flor)](https://es.wikipedia.org/wiki/Truco_argentino).
 
 Card visuals reference the **Castilian pattern** (Fournier) baraja española:
 [Wikipedia — Spanish-suited playing cards](https://en.wikipedia.org/wiki/Spanish-suited_playing_cards),

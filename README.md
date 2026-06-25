@@ -13,15 +13,18 @@ and tablets.
 
 ## The game
 
-- **Truco for 2 or 4** (vs AI, 1v1 online, or 2v2 in teams), first to **30 points**, sin flor
+- **Truco for 2 or 4** (vs AI, 1v1 online, or 2v2 in teams), first to **30 points**
 - Full **envido** system: Envido, Envido-Envido, Real Envido, Falta Envido with
   malas/buenas math, mano-wins-ties, "el envido está primero"
 - Full **truco** escalation: Truco → Retruco → Vale Cuatro, with the
   quiero-side-raises rule
+- Optional **Flor** (1v1/solo): an opt-in toggle for "con flor" — Flor,
+  Contraflor, Contraflor al resto, only offered when you hold three same-suit
+  cards, and it beats the envido
 - **Ir al mazo** (folding), all five **parda** (tied-trick) resolution cases
-- Rules verified against 5 independent sources — and the **2v2 team rules**
-  against 5 more — see [RULES.md](RULES.md)
-- 101 engine tests: `node test_engine.js` (1v1) + `node test_engine4.js` (2v2)
+- Rules verified against independent sources — and the **2v2 team rules**
+  separately — see [RULES.md](RULES.md)
+- 128 engine tests: `node test_engine.js` (1v1, incl. Flor) + `node test_engine4.js` (2v2)
 
 ## Play online
 

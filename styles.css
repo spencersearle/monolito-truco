@@ -282,6 +282,20 @@ body {
 }
 .lang-toggle:hover { border-color: var(--gold-bright); box-shadow: 0 0 16px rgba(242, 201, 76, .3); }
 
+.flor-toggle {
+  align-self: center;
+  letter-spacing: .14em;
+  font-size: .72rem;
+  padding: 6px 16px;
+  opacity: .75;
+}
+.flor-toggle.flor-on {
+  opacity: 1;
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+  box-shadow: 0 0 14px rgba(242, 201, 76, .25);
+}
+
 .solo-hint {
   text-align: center;
   font-size: .82rem;
