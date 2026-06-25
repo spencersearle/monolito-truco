@@ -66,6 +66,27 @@
     </div>
   </div>
 
+  <!-- Deal-me-in: pick a local game -->
+  <div class="overlay hidden" id="solo-overlay">
+    <div class="overlay-panel">
+      <h2>DEAL ME IN</h2>
+      <p class="online-status">A quick game right here on this device.</p>
+      <button class="btn btn-gold" id="btn-solo-bot">⚔ &nbsp;PLAY A BOT</button>
+      <button class="btn btn-gold" id="btn-solo-local">👥 &nbsp;PASS &amp; PLAY</button>
+      <p class="solo-hint">Pass &amp; play hands one device back and forth between two players.</p>
+      <button class="btn btn-ghost" id="btn-solo-cancel">BACK</button>
+    </div>
+  </div>
+
+  <!-- Pass-the-device gate (pass &amp; play) -->
+  <div class="passgate hidden" id="passgate">
+    <div class="passgate-inner">
+      <div class="passgate-title" id="passgate-title">PLAYER 2</div>
+      <p class="passgate-sub">Pass the device over — your cards are hidden until you tap.</p>
+      <button class="btn btn-gold" id="passgate-go">I'M READY</button>
+    </div>
+  </div>
+
   <!-- Rules overlay -->
   <div class="overlay hidden" id="rules-overlay">
     <div class="overlay-panel">

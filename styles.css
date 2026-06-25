@@ -261,6 +261,50 @@ body {
 
 .overlay-panel .btn { align-self: center; }
 
+.solo-hint {
+  text-align: center;
+  font-size: .82rem;
+  color: rgba(245, 234, 209, .55);
+  margin: -6px 0 2px;
+}
+
+/* pass-the-device gate: a full, opaque cover so the next player can't peek
+   at the outgoing hand behind it */
+.passgate {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(18, 48, 110, .55), transparent 60%),
+    #040a1c;
+}
+
+.passgate-inner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.passgate-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: .14em;
+  font-size: clamp(1.6rem, 6vw, 2.6rem);
+  color: var(--gold-bright);
+  text-shadow: 0 0 30px rgba(242, 201, 76, .35);
+}
+
+.passgate-sub {
+  color: rgba(245, 234, 209, .7);
+  max-width: 28ch;
+  line-height: 1.5;
+}
+
 .hidden { display: none !important; }
 
 /* ---------- online lobby ---------- */

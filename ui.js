@@ -58,6 +58,9 @@
     btnName: $("btn-name"), namePanel: $("name-panel"),
     nameInput: $("name-input"), btnNameSave: $("btn-name-save"),
     splashStats: $("splash-stats"), hudCode: $("hud-code"),
+    soloOverlay: $("solo-overlay"), btnSoloBot: $("btn-solo-bot"),
+    btnSoloLocal: $("btn-solo-local"), btnSoloCancel: $("btn-solo-cancel"),
+    passgate: $("passgate"), passgateTitle: $("passgate-title"), passgateGo: $("passgate-go"),
   };
 
   /* the table code for the game in progress (online only), so players can
@@ -82,6 +85,9 @@
 
   let game = null;             // 1v1 / solo engine
   let net = null;              // null = solo vs AI; { role: 'host'|'guest' } = online 1v1
+  let local2 = false;          // solo: pass-and-play (two humans hot-seat on one device)
+  let controller = "you";      // local2: which seat's cards are revealed/playable right now
+  let botName = "El Monolito"; // solo vs bot: the AI opponent's name this game
   let rivalName = null;        // 1v1 online rival's name
   let pendingDeal = null;      // 1v1 guest: next hand received mid-animation
   let rivalGone = false;       // 1v1 host: rival dropped, paused waiting for rejoin
@@ -123,8 +129,14 @@
     return cleanName(el.onlineName.value || localStorage.getItem("monolito-name") || "Player");
   }
 
-  const OPP_NAME = () => (net ? (rivalName || "your rival") : "El Monolito");
-  const OPP_CAP = () => (net ? (rivalName || "Your rival") : "El Monolito");
+  // Argentine names/nicknames the local bot can wear (El Monolito stays in the mix)
+  const BOT_OPPONENTS = ["El Monolito", "El Pampa", "Don Roberto", "Beto", "Tincho",
+    "La Mona", "El Tano", "Diego", "Lucho", "El Colo"];
+
+  const OPP_NAME = () =>
+    net ? (rivalName || "your rival") : local2 ? "Player 2" : botName;
+  const OPP_CAP = () =>
+    net ? (rivalName || "Your rival") : local2 ? "Player 2" : botName;
 
   /* ---------- match stats (solo vs El Monolito, persisted) ---------- */
 
@@ -148,12 +160,12 @@
   /* ---------- El Monolito's voice (solo only — taunts in his bubble) ---------- */
 
   const TAUNTS = {
-    truco:    ["¿Tenés con qué?", "El Monolito no parpadea.", "Subo. Temblá.", "A ver esas cartas…", "¿Vas a querer?"],
+    truco:    ["¿Tenés con qué?", "No parpadeo, eh.", "Subo. Temblá.", "A ver esas cartas…", "¿Vas a querer?"],
     envido:   ["Mis números cantan solos.", "El envido es mío.", "Contá… igual perdés.", "Treinta y tres, casi siempre."],
-    winHand:  ["Otra para la piedra.", "Así se juega al truco.", "¿Aprendiste algo?", "El Monolito no perdona.", "Previsible."],
-    youFold:  ["Sabia decisión.", "Al mazo, como debe ser.", "La piedra siempre gana.", "Huir también es jugar."],
-    winGame:  ["El Monolito permanece. Siempre.", "Treinta. Yo no me muevo.", "La piedra no se rompe.", "¿Otra derrota?"],
-    loseGame: ["Hoy… la piedra cede.", "Disfrutá. No se repetirá.", "Hmph. Suerte de principiante.", "Volveré a ser de piedra."],
+    winHand:  ["Otra a la bolsa.", "Así se juega al truco.", "¿Aprendiste algo?", "No perdono.", "Previsible."],
+    youFold:  ["Sabia decisión.", "Al mazo, como debe ser.", "Siempre gano.", "Huir también es jugar."],
+    winGame:  ["Acá sigo, intacto.", "Treinta. No me muevo.", "No me rompés.", "¿Otra derrota?"],
+    loseGame: ["Hoy cedo… por hoy.", "Disfrutá. No se repetirá.", "Hmph. Suerte de principiante.", "Volveré."],
   };
   const pickTaunt = (kind) => {
     const pool = TAUNTS[kind];
@@ -162,7 +174,7 @@
   // show a taunt in El Monolito's bubble; solo play only, with a chance to stay quiet.
   // queued after the triggering event, which supplies the pause before he speaks.
   function taunt(kind, chance = 0.5, hold = 2200) {
-    if (net) return;                       // El Monolito only exists vs the AI
+    if (net || local2) return;             // only the solo bot talks trash
     if (Math.random() > chance) return;
     const line = pickTaunt(kind);
     if (line) enqueue(() => bubbleAt("top", line, hold), 350);
@@ -322,25 +334,27 @@
   function renderHands(deal) {
     el.handYou.innerHTML = "";
     el.handAi.innerHTML = "";
-    const canPlay = !busy && game && !game.pending && !game.handOver &&
-      game.toAct === "you" && game.legalActions("you").includes("play");
+    renderSeatHand("you", el.handYou, deal);
+    renderSeatHand("ai", el.handAi, deal);
+  }
 
-    game.hands.you.forEach((card, i) => {
-      const c = makeCardEl(card, false);
+  /* render one seat's hand. Face-up only for the seat that should see it:
+     in solo/online that's always "you"; in pass-and-play it's the seat
+     currently holding the device (controller). */
+  function renderSeatHand(seat, holder, deal) {
+    const faceUp = local2 ? seat === controller : seat === "you";
+    const canPlay = faceUp && !busy && game && !game.pending && !game.handOver &&
+      game.toAct === seat && game.legalActions(seat).includes("play");
+    game.hands[seat].forEach((card, i) => {
+      const c = makeCardEl(faceUp ? card : null, false);
       if (deal) { c.classList.add("dealt-in"); c.style.animationDelay = `${i * 0.12}s`; }
       if (canPlay) {
         c.classList.add("playable");
-        c.addEventListener("click", () => localPlay(i));
+        c.addEventListener("click", () => localPlay(i, seat));
       } else {
         c.classList.add("disabled");
       }
-      el.handYou.appendChild(c);
-    });
-
-    game.hands.ai.forEach((_, i) => {
-      const c = makeCardEl(null, false);
-      if (deal) { c.classList.add("dealt-in"); c.style.animationDelay = `${i * 0.12}s`; }
-      el.handAi.appendChild(c);
+      holder.appendChild(c);
     });
   }
 
@@ -370,8 +384,9 @@
   function renderChips() {
     el.dockButtons.innerHTML = "";
     if (busy || !game || game.handOver || game.gameOver) return;
-    const legal = game.legalActions("you").filter((a) => a !== "play");
-    renderChipButtons(legal, localCall);
+    const seat = local2 ? controller : "you";
+    const legal = game.legalActions(seat).filter((a) => a !== "play");
+    renderChipButtons(legal, (name) => localCall(name, seat));
   }
 
   /* ---------- event presentation (1v1 / solo) ---------- */
@@ -400,7 +415,8 @@
 
       case "turn":
         enqueue(() => {
-          msg(ev.player === "you" ? "Your move" : `${OPP_CAP()} is thinking…`);
+          if (local2) msg(ev.player === "you" ? "Player 1's move" : "Player 2's move");
+          else msg(ev.player === "you" ? "Your move" : `${OPP_CAP()} is thinking…`);
         }, 80);
         break;
 
@@ -489,6 +505,9 @@
         if (ev.winner === "ai" && !game.gameOver) taunt("winHand", 0.4);
         if (!game.gameOver) {
           if (!net) {
+            // clear the old hand so the fresh deal is unmistakable (esp. after
+            // an immediate fold/no-quiero, where no cards were played)
+            enqueue(() => { el.handYou.innerHTML = ""; el.handAi.innerHTML = ""; }, 200);
             enqueue(() => { game.nextHand(); sync(); }, 0);
           } else if (net.role === "host") {
             // host deals the next hand and broadcasts it; guest waits for it
@@ -516,16 +535,18 @@
     if (!busy) onIdle();
   }
 
-  function localPlay(index) {
+  function localPlay(index, seat = "you") {
     if (busy || !game || game.gameOver) return;
+    if (local2) { if (game.playCard(seat, index)) sync(); return; }
     if (game.playCard("you", index)) {
       if (net) Net.send({ t: "act", a: { kind: "play", index } });
       sync();
     }
   }
 
-  function localCall(name) {
+  function localCall(name, seat = "you") {
     if (busy || !game || game.gameOver) return;
+    if (local2) { if (game.call(seat, name)) sync(); return; }
     if (game.call("you", name)) {
       if (net) Net.send({ t: "act", a: { kind: "call", name } });
       sync();
@@ -542,6 +563,8 @@
       applyDeal(hands);
       return;
     }
+
+    if (local2) { idleLocal2(); return; }   // pass-and-play hot-seat
 
     renderHands(false);
     renderChips();
@@ -567,15 +590,56 @@
     }
   }
 
+  /* ---------- pass-and-play (two humans, one device) ---------- */
+
+  /* the seat that must act now: the responder to a pending call, else toAct */
+  function activeSeat1() {
+    if (game.pending) return Truco.other(game.pending.caller);
+    return game.toAct;
+  }
+
+  function idleLocal2() {
+    renderScores();
+    if (game.handOver) { renderHands(false); el.dockButtons.innerHTML = ""; return; }
+    const active = activeSeat1();
+    if (controller !== active) {
+      showPassGate(active);                 // hand the device to the next player
+    } else {
+      el.passgate.classList.add("hidden");
+      renderHands(false);
+      renderChips();
+    }
+  }
+
+  /* cover the table so the incoming player can't see the outgoing hand */
+  function showPassGate(seat) {
+    el.dockButtons.innerHTML = "";
+    el.passgateTitle.textContent = (seat === "you" ? "PLAYER 1" : "PLAYER 2") + " — YOUR TURN";
+    el.passgate.classList.remove("hidden");
+    msg("Pass the device…");
+  }
+
+  function passGateReady() {
+    if (!local2 || !game) return;
+    controller = activeSeat1();
+    el.passgate.classList.add("hidden");
+    renderHands(false);
+    renderChips();
+    msg(controller === game.toAct && !game.pending ? "Your move" : "Your answer?");
+  }
+
   function showEndgame(winner) {
+    el.passgate.classList.add("hidden");
     const div = document.createElement("div");
     div.className = "endgame";
     const won = winner === "you";
-    const title = won ? "YOU WIN"
-      : net ? `${esc((rivalName || "YOUR RIVAL").toUpperCase())} WINS` : "EL MONOLITO WINS";
-    // solo vs El Monolito: record the result and let him have the last word
+    const title = won
+      ? (local2 ? "PLAYER 1 WINS" : "YOU WIN")
+      : net ? `${esc((rivalName || "YOUR RIVAL").toUpperCase())} WINS`
+      : local2 ? "PLAYER 2 WINS" : `${esc(botName.toUpperCase())} WINS`;
+    // solo vs the bot: record the result and let it have the last word
     let extra = "";
-    if (!net) {
+    if (!net && !local2) {
       const s = Stats.record(won);
       const streakTxt = s.streak > 1 ? ` · 🔥 ${s.streak} in a row` : "";
       extra = `<div class="endgame-taunt">“${esc(pickTaunt(won ? "loseGame" : "winGame"))}”</div>
@@ -591,7 +655,7 @@
     document.body.appendChild(div);
     const btn = div.querySelector("#btn-again");
     btn.addEventListener("click", () => {
-      if (!net) { div.remove(); newGame(); return; }
+      if (!net) { div.remove(); local2 ? newLocalGame() : newGame(); return; }
       if (net.role === "host") { div.remove(); hostBegin(); }
       else {
         Net.send({ t: "again" });
@@ -1526,8 +1590,9 @@
     el.splash.classList.add("gone");
     el.stage.classList.remove("hidden");
     if (!game4) {
-      el.labelYou.textContent = "YOU";
-      el.labelOpp.textContent = net ? (rivalName || "RIVAL").toUpperCase() : "EL MONOLITO";
+      el.labelYou.textContent = local2 ? "PLAYER 1" : "YOU";
+      el.labelOpp.textContent = net ? (rivalName || "RIVAL").toUpperCase()
+        : local2 ? "PLAYER 2" : botName.toUpperCase();
       el.btnChat.classList.toggle("hidden", !net);
       el.btnName.classList.toggle("hidden", !net);
     }
@@ -1541,9 +1606,26 @@
     leaveNet();
     leaveNet4();
     resetChat();
+    local2 = false;
     game = new Truco.Game();
     queue = [];
     busy = false;
+    renderScores();
+    sync();
+  }
+
+  /* pass-and-play: two humans share one device, hands hidden behind a gate */
+  function newLocalGame() {
+    leaveNet();
+    leaveNet4();
+    resetChat();
+    local2 = true;
+    controller = null;            // force a pass-gate before the first turn
+    game = new Truco.Game();
+    queue = [];
+    busy = false;
+    el.labelYou.textContent = "PLAYER 1";
+    el.labelOpp.textContent = "PLAYER 2";
     renderScores();
     sync();
   }
@@ -1554,10 +1636,12 @@
     queue = [];
     busy = false;
     aiThinking = false;
+    local2 = false;
     pendingDeal = null;
     pendingDeal4 = null;
     rivalGone = false;
     myTableCode = null;
+    el.passgate.classList.add("hidden");
     stopHeartbeat();
     clearEcho();
     clearTimeout(botTimer);
@@ -2003,15 +2087,27 @@
     const s = Stats.get();
     if (s.wins + s.losses === 0) { el.splashStats.classList.add("hidden"); return; }
     const streakTxt = s.streak > 1 ? ` · 🔥 ${s.streak}` : "";
-    el.splashStats.textContent = `vs El Monolito: ${s.wins}W — ${s.losses}L${streakTxt} · best ${s.best}`;
+    el.splashStats.textContent = `Solo record: ${s.wins}W — ${s.losses}L${streakTxt} · best ${s.best}`;
     el.splashStats.classList.remove("hidden");
   }
   renderSplashStats();
 
-  el.btnStart.addEventListener("click", () => {
+  el.btnStart.addEventListener("click", () => el.soloOverlay.classList.remove("hidden"));
+  el.btnSoloCancel.addEventListener("click", () => el.soloOverlay.classList.add("hidden"));
+  el.btnSoloBot.addEventListener("click", () => {
+    el.soloOverlay.classList.add("hidden");
+    local2 = false;
+    botName = BOT_OPPONENTS[Math.floor(Math.random() * BOT_OPPONENTS.length)];
     enterStage();
     newGame();
   });
+  el.btnSoloLocal.addEventListener("click", () => {
+    el.soloOverlay.classList.add("hidden");
+    local2 = true;
+    enterStage();
+    newLocalGame();
+  });
+  el.passgateGo.addEventListener("click", passGateReady);
 
   el.btnOnline.addEventListener("click", openOnlineMenu);
   el.btnJoinGame.addEventListener("click", openJoinPrompt);
