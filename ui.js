@@ -57,8 +57,26 @@
     chatToastText: $("chat-toast-text"),
     btnName: $("btn-name"), namePanel: $("name-panel"),
     nameInput: $("name-input"), btnNameSave: $("btn-name-save"),
-    splashStats: $("splash-stats"),
+    splashStats: $("splash-stats"), hudCode: $("hud-code"),
   };
+
+  /* the table code for the game in progress (online only), so players can
+     share it or rejoin without leaving the table */
+  function activeCode() {
+    if (net) return net.role === "host" ? myTableCode : joinCode;
+    if (room) return room.role === "host" ? myTableCode : room.code;
+    return null;
+  }
+
+  function renderHudCode() {
+    const code = activeCode();
+    if (code) {
+      el.hudCode.textContent = "CODE " + code.toUpperCase();
+      el.hudCode.classList.remove("hidden");
+    } else {
+      el.hudCode.classList.add("hidden");
+    }
+  }
 
   /* ---------- state ---------- */
 
@@ -1473,6 +1491,7 @@
     if (location.hash.startsWith("#join")) {
       history.replaceState(null, "", location.pathname + location.search);
     }
+    renderHudCode();
   }
 
   function newGame() {
@@ -1518,6 +1537,7 @@
     el.playedRight.classList.add("hidden");
     for (const p of [el.plateTop, el.plateLeft, el.plateRight, el.plateYou]) p.classList.add("hidden");
     el.btnName.classList.add("hidden");
+    el.hudCode.classList.add("hidden");
     closeNamePanel();
     resetChat();
     renderSplashStats();
@@ -2018,6 +2038,13 @@
     else closeNamePanel();
   });
   el.btnLobbyName.addEventListener("click", openNamePanel);
+  el.hudCode.addEventListener("click", async () => {
+    const code = activeCode();
+    if (!code) return;
+    await copyText(code.toUpperCase());
+    el.hudCode.textContent = "COPIED ✓";
+    setTimeout(renderHudCode, 1400);
+  });
   el.btnNameSave.addEventListener("click", applyRename);
   el.nameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); applyRename(); }

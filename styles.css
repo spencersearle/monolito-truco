@@ -585,6 +585,27 @@ body {
   gap: 6px;
 }
 
+.hud-code {
+  font-family: var(--font-hud);
+  font-weight: 700;
+  letter-spacing: .14em;
+  font-size: .62rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid rgba(212, 160, 42, .4);
+  color: rgba(242, 201, 76, .85);
+  background: rgba(10, 26, 58, .5);
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+  transition: all .18s ease;
+}
+
+.hud-code:hover {
+  border-color: rgba(242, 201, 76, .7);
+  box-shadow: 0 0 16px rgba(212, 160, 42, .3);
+}
+
 .exit-btn {
   font-family: var(--font-hud);
   font-weight: 700;
