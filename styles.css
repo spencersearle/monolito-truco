@@ -261,6 +261,27 @@ body {
 
 .overlay-panel .btn { align-self: center; }
 
+.lang-toggle {
+  position: fixed;
+  left: calc(14px + env(safe-area-inset-left));
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 55;
+  font-family: var(--font-hud);
+  font-weight: 700;
+  letter-spacing: .12em;
+  font-size: .72rem;
+  width: 44px;
+  height: 32px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid rgba(212, 160, 42, .45);
+  color: var(--gold-bright);
+  background: rgba(10, 26, 58, .6);
+  backdrop-filter: blur(6px);
+  transition: all .18s ease;
+}
+.lang-toggle:hover { border-color: var(--gold-bright); box-shadow: 0 0 16px rgba(242, 201, 76, .3); }
+
 .solo-hint {
   text-align: center;
   font-size: .82rem;

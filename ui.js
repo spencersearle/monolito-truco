@@ -61,7 +61,164 @@
     soloOverlay: $("solo-overlay"), btnSoloBot: $("btn-solo-bot"),
     btnSoloLocal: $("btn-solo-local"), btnSoloCancel: $("btn-solo-cancel"),
     passgate: $("passgate"), passgateTitle: $("passgate-title"), passgateGo: $("passgate-go"),
+    splashTag: $("splash-tag"), langToggle: $("lang-toggle"),
   };
+
+  /* ---------- i18n (English / Spanish) ---------- */
+
+  let lang = localStorage.getItem("monolito-lang") === "es" ? "es" : "en";
+
+  const PT = (n) => (lang === "es" ? (n > 1 ? "puntos" : "punto") : (n > 1 ? "points" : "point"));
+
+  const T = {
+    en: {
+      // splash + menus
+      splashTag: "Envido · Truco · Vale Cuatro — first to 30",
+      dealMeIn: "DEAL ME IN", playOnline: "⟡ PLAY ONLINE", joinGame: "⇥ JOIN GAME",
+      howToPlay: "HOW TO PLAY", back: "BACK",
+      soloStatus: "A quick game right here on this device.",
+      playBot: "⚔  PLAY A BOT", passPlay: "👥  PASS & PLAY",
+      soloHint: "Pass & play hands one device back and forth between two players.",
+      passSub: "Pass the device over — your cards are hidden until you tap.",
+      ready: "I'M READY",
+      // online chrome
+      yourName: "YOUR NAME", tableCode: "TABLE CODE", copy: "COPY", copied: "COPIED ✓",
+      orCopyLink: "OR COPY A LINK", share: "SHARE…", startGame: "START GAME",
+      joinTable: "JOIN TABLE", cancel: "CANCEL", editName: "✎ EDIT NAME",
+      tableTalkBtn: "💬 TABLE TALK", save: "SAVE", tableTalk: "TABLE TALK",
+      sayThis: "Say something…", playerPH: "Player",
+      codeHint: 'Share this code — your friend types it into JOIN GAME to sit down or rejoin.',
+      // lobby
+      teamGold: "TEAM GOLD", teamBlue: "TEAM BLUE",
+      waitingPlayer: "Waiting for a player…", tagBot: "  · BOT", tagYou: "  · YOU", tagHost: "  · HOST",
+      addBot: "+ ADD BOT", remove: "REMOVE", teamBtn: "↕ TEAM", swapHere: "↕ SWAP HERE", cancelSwap: "✕ CANCEL",
+      startReady: "START GAME", startFill: "FILL ALL 4 SEATS TO START",
+      lobbySwap: "Pick the seat to switch with — swapping changes teams.",
+      lobbyFull: "Table full — deal the cards! (↕ TEAM to rearrange sides)",
+      lobbyShare: "Share the code — friends take seats as they arrive. Short a player? Add a bot.",
+      lobbyHostStatus: "Share the code — friends take seats as they arrive.",
+      lobbyWaitStart: "Waiting for the host to start the game…",
+      atTheTable: "AT THE TABLE", your2v2: "YOUR 2v2 TABLE", summoning: "Summoning a table…",
+      pickTable: "Pick your table — 1v1 duel or 2v2 with partners.",
+      // hud
+      you: "YOU", us: "US", them: "THEM", player1: "PLAYER 1", player2: "PLAYER 2",
+      pointsOnTable: (v) => `${v} ${(v > 1 ? "POINTS" : "POINT")} ON THE TABLE`,
+      code: (c) => "CODE " + c,
+      // dock / play-by-play (1v1 + solo + local2)
+      newHandYouMano: "New hand — you are mano, you lead",
+      newHandOppMano: (o) => `New hand — ${o} is mano`,
+      yourMove: "Your move", oppThinking: (o) => `${o} is thinking…`,
+      p1Move: "Player 1's move", p2Move: "Player 2's move",
+      passDevice: "Pass the device…", yourAnswer: "Your answer?",
+      yourTurnP: (p) => `${p} — YOUR TURN`,
+      parda: "¡Parda! — tied trick", youTakeTrick: "You take the trick",
+      oppTakesTrick: (o) => `${o} takes the trick`,
+      waitingFor: (o) => `Waiting for ${o}…`, oppCalls: (o) => `${o} calls — your answer?`,
+      envidoPrimero: "¡El envido está primero! Truco is set aside",
+      youWinEnvido: (n) => `You win the envido — ${n} ${PT(n)}`,
+      oppWinsEnvido: (o, n) => `${o} wins the envido — ${n} ${PT(n)}`,
+      declinedYouScore: (n) => `Declined — you score ${n}`,
+      youDeclinedOppScores: (o, n) => `You declined — ${o} scores ${n}`,
+      whyFold: " (fold)", whyNoQuiero: " (no quiero)",
+      youWinHand: (n, w) => `You win the hand — ${n} ${PT(n)}${w}`,
+      oppWinsHand: (o, n, w) => `${o} wins the hand — ${n} ${PT(n)}${w}`,
+      // 2v2 play-by-play
+      newHandYouMano4: "New hand — you are mano, you lead",
+      newHandMano4: (n) => `New hand — ${n} is mano`,
+      seatThinking: (n) => `${n} is thinking…`,
+      youTakeTrick4: "You take the trick", seatTakesTrick: (n) => `${n} takes the trick`,
+      waitingAnswer: "Waiting for an answer…",
+      seatCallsAnswer: (n) => `${n} calls — your side answers`,
+      seatCalls: (n) => `${n} calls…`,
+      teamWinsEnvido: (n) => `Your team wins the envido — ${n} ${PT(n)}`,
+      seatTeamEnvido: (s, n) => `${s}'s team wins the envido — ${n} ${PT(n)}`,
+      teamDeclined: (n) => `Declined — your team scores ${n}`,
+      seatTeamDeclined: (s, n) => `Declined — ${s}'s team scores ${n}`,
+      teamWinsHand: (n, w) => `Your team wins the hand — ${n} ${PT(n)}${w}`,
+      theyWinHand: (n, w) => `They win the hand — ${n} ${PT(n)}${w}`,
+      // endgame
+      youWin: "YOU WIN", oppWins: (o) => `${o} WINS`,
+      p1Wins: "PLAYER 1 WINS", p2Wins: "PLAYER 2 WINS",
+      yourTeamWins: "YOUR TEAM WINS", teamWins: (m) => `${m} WIN`,
+      playAgain: "PLAY AGAIN", waitingHost: "WAITING FOR HOST…",
+      inARow: (n) => ` · 🔥 ${n} in a row`,
+      record: (w, l, st, b) => `${w}W — ${l}L${st} · best streak ${b}`,
+      soloRecord: (w, l, st, b) => `Solo record: ${w}W — ${l}L${st} · best ${b}`,
+    },
+    es: {
+      splashTag: "Envido · Truco · Vale Cuatro — primero a 30",
+      dealMeIn: "A JUGAR", playOnline: "⟡ JUGAR ONLINE", joinGame: "⇥ ENTRAR A UNA MESA",
+      howToPlay: "CÓMO JUGAR", back: "VOLVER",
+      soloStatus: "Una partida rápida acá mismo, en este dispositivo.",
+      playBot: "⚔  JUGAR VS BOT", passPlay: "👥  PASAR Y JUGAR",
+      soloHint: "Pasar y jugar: un solo dispositivo que va y viene entre dos jugadores.",
+      passSub: "Pasá el dispositivo — tus cartas quedan ocultas hasta que toques.",
+      ready: "LISTO",
+      yourName: "TU NOMBRE", tableCode: "CÓDIGO DE MESA", copy: "COPIAR", copied: "COPIADO ✓",
+      orCopyLink: "O COPIAR UN ENLACE", share: "COMPARTIR…", startGame: "EMPEZAR",
+      joinTable: "ENTRAR", cancel: "CANCELAR", editName: "✎ CAMBIAR NOMBRE",
+      tableTalkBtn: "💬 CHARLA", save: "GUARDAR", tableTalk: "CHARLA DE MESA",
+      sayThis: "Decí algo…", playerPH: "Jugador",
+      codeHint: "Compartí este código — tu amigo lo escribe en ENTRAR para sentarse o volver.",
+      teamGold: "EQUIPO ORO", teamBlue: "EQUIPO AZUL",
+      waitingPlayer: "Esperando un jugador…", tagBot: "  · BOT", tagYou: "  · VOS", tagHost: "  · ANFITRIÓN",
+      addBot: "+ SUMAR BOT", remove: "QUITAR", teamBtn: "↕ EQUIPO", swapHere: "↕ CAMBIAR ACÁ", cancelSwap: "✕ CANCELAR",
+      startReady: "EMPEZAR", startFill: "LLENÁ LOS 4 ASIENTOS PARA EMPEZAR",
+      lobbySwap: "Elegí el asiento con quién cambiar — cambiar de lugar cambia de equipo.",
+      lobbyFull: "Mesa completa — ¡a repartir! (↕ EQUIPO para reordenar los lados)",
+      lobbyShare: "Compartí el código — los amigos se sientan al llegar. ¿Falta gente? Sumá un bot.",
+      lobbyHostStatus: "Compartí el código — los amigos se sientan al llegar.",
+      lobbyWaitStart: "Esperando que el anfitrión empiece la partida…",
+      atTheTable: "EN LA MESA", your2v2: "TU MESA 2v2", summoning: "Buscando una mesa…",
+      pickTable: "Elegí tu mesa — duelo 1v1 o 2v2 con compañeros.",
+      you: "VOS", us: "NOSOTROS", them: "ELLOS", player1: "JUGADOR 1", player2: "JUGADOR 2",
+      pointsOnTable: (v) => `${v} ${(v > 1 ? "PUNTOS" : "PUNTO")} EN LA MESA`,
+      code: (c) => "CÓDIGO " + c,
+      newHandYouMano: "Mano nueva — sos mano, vos abrís",
+      newHandOppMano: (o) => `Mano nueva — ${o} es mano`,
+      yourMove: "Tu jugada", oppThinking: (o) => `${o} está pensando…`,
+      p1Move: "Juega el Jugador 1", p2Move: "Juega el Jugador 2",
+      passDevice: "Pasá el dispositivo…", yourAnswer: "¿Tu respuesta?",
+      yourTurnP: (p) => `${p} — TE TOCA`,
+      parda: "¡Parda! — empate", youTakeTrick: "Te llevás la baza",
+      oppTakesTrick: (o) => `${o} se lleva la baza`,
+      waitingFor: (o) => `Esperando a ${o}…`, oppCalls: (o) => `${o} canta — ¿qué hacés?`,
+      envidoPrimero: "¡El envido está primero! El truco queda en pausa",
+      youWinEnvido: (n) => `Ganás el envido — ${n} ${PT(n)}`,
+      oppWinsEnvido: (o, n) => `${o} gana el envido — ${n} ${PT(n)}`,
+      declinedYouScore: (n) => `No quiero — sumás ${n}`,
+      youDeclinedOppScores: (o, n) => `No quisiste — ${o} suma ${n}`,
+      whyFold: " (al mazo)", whyNoQuiero: " (no quiero)",
+      youWinHand: (n, w) => `Ganás la mano — ${n} ${PT(n)}${w}`,
+      oppWinsHand: (o, n, w) => `${o} gana la mano — ${n} ${PT(n)}${w}`,
+      newHandYouMano4: "Mano nueva — sos mano, vos abrís",
+      newHandMano4: (n) => `Mano nueva — ${n} es mano`,
+      seatThinking: (n) => `${n} está pensando…`,
+      youTakeTrick4: "Te llevás la baza", seatTakesTrick: (n) => `${n} se lleva la baza`,
+      waitingAnswer: "Esperando respuesta…",
+      seatCallsAnswer: (n) => `${n} canta — responde tu equipo`,
+      seatCalls: (n) => `${n} canta…`,
+      teamWinsEnvido: (n) => `Tu equipo gana el envido — ${n} ${PT(n)}`,
+      seatTeamEnvido: (s, n) => `El equipo de ${s} gana el envido — ${n} ${PT(n)}`,
+      teamDeclined: (n) => `No quiero — tu equipo suma ${n}`,
+      seatTeamDeclined: (s, n) => `No quiero — el equipo de ${s} suma ${n}`,
+      teamWinsHand: (n, w) => `Tu equipo gana la mano — ${n} ${PT(n)}${w}`,
+      theyWinHand: (n, w) => `Ellos ganan la mano — ${n} ${PT(n)}${w}`,
+      youWin: "GANASTE", oppWins: (o) => `GANA ${o}`,
+      p1Wins: "GANA EL JUGADOR 1", p2Wins: "GANA EL JUGADOR 2",
+      yourTeamWins: "GANA TU EQUIPO", teamWins: (m) => `GANAN ${m}`,
+      playAgain: "OTRA MANO", waitingHost: "ESPERANDO AL ANFITRIÓN…",
+      inARow: (n) => ` · 🔥 ${n} seguidas`,
+      record: (w, l, st, b) => `${w}G — ${l}P${st} · mejor racha ${b}`,
+      soloRecord: (w, l, st, b) => `Récord solo: ${w}G — ${l}P${st} · mejor ${b}`,
+    },
+  };
+
+  function t(key, ...args) {
+    const v = (T[lang] && T[lang][key] != null) ? T[lang][key] : T.en[key];
+    if (v == null) return key;
+    return typeof v === "function" ? v(...args) : v;
+  }
 
   /* the table code for the game in progress (online only), so players can
      share it or rejoin without leaving the table */
@@ -74,7 +231,7 @@
   function renderHudCode() {
     const code = activeCode();
     if (code) {
-      el.hudCode.textContent = "CODE " + code.toUpperCase();
+      el.hudCode.textContent = t("code", code.toUpperCase());
       el.hudCode.classList.remove("hidden");
     } else {
       el.hudCode.classList.add("hidden");
@@ -378,7 +535,7 @@
 
   function renderStake() {
     const v = Truco.TRUCO_HAND_VALUE[game.trucoLevel];
-    el.stakeLabel.textContent = `${v} POINT${v > 1 ? "S" : ""} ON THE TABLE`;
+    el.stakeLabel.textContent = t("pointsOnTable", v);
   }
 
   function renderChips() {
@@ -399,7 +556,7 @@
           renderPips();
           renderStake();
           renderHands(true);
-          msg(ev.mano === "you" ? "New hand — you are mano, you lead" : `New hand — ${OPP_NAME()} is mano`);
+          msg(ev.mano === "you" ? t("newHandYouMano") : t("newHandOppMano", OPP_NAME()));
         }, 700);
         break;
 
@@ -415,21 +572,21 @@
 
       case "turn":
         enqueue(() => {
-          if (local2) msg(ev.player === "you" ? "Player 1's move" : "Player 2's move");
-          else msg(ev.player === "you" ? "Your move" : `${OPP_CAP()} is thinking…`);
+          if (local2) msg(ev.player === "you" ? t("p1Move") : t("p2Move"));
+          else msg(ev.player === "you" ? t("yourMove") : t("oppThinking", OPP_CAP()));
         }, 80);
         break;
 
       case "trick-end":
         enqueue(() => {
-          const t = game.tricks[ev.trickIndex];
+          const tr = game.tricks[ev.trickIndex];
           const yCard = el.playedYou.lastElementChild;
           const aCard = el.playedAi.lastElementChild;
-          if (t.winner === "you") { yCard?.classList.add("trick-win"); aCard?.classList.add("trick-lose"); }
-          else if (t.winner === "ai") { aCard?.classList.add("trick-win"); yCard?.classList.add("trick-lose"); }
+          if (tr.winner === "you") { yCard?.classList.add("trick-win"); aCard?.classList.add("trick-lose"); }
+          else if (tr.winner === "ai") { aCard?.classList.add("trick-win"); yCard?.classList.add("trick-lose"); }
           renderPips();
-          msg(t.winner === "tie" ? "¡Parda! — tied trick" :
-              t.winner === "you" ? "You take the trick" : `${OPP_CAP()} takes the trick`);
+          msg(tr.winner === "tie" ? t("parda") :
+              tr.winner === "you" ? t("youTakeTrick") : t("oppTakesTrick", OPP_CAP()));
         }, 1300);
         enqueue(() => clearBattle(), 150);
         break;
@@ -440,7 +597,7 @@
           const text = CALL_TEXT[ev.name] || ev.name;
           bubble(ev.player, text);
           if (big) flash(text);
-          msg(ev.player === "you" ? `Waiting for ${OPP_NAME()}…` : `${OPP_CAP()} calls — your answer?`);
+          msg(ev.player === "you" ? t("waitingFor", OPP_NAME()) : t("oppCalls", OPP_CAP()));
         }, big ? 1400 : 900);
         if (ev.player === "ai") {
           if (["Truco", "Retruco", "Vale Cuatro"].includes(ev.name)) taunt("truco", 0.5);
@@ -456,7 +613,7 @@
         break;
 
       case "envido-primero":
-        enqueue(() => msg("¡El envido está primero! Truco is set aside"), 900);
+        enqueue(() => msg(t("envidoPrimero")), 900);
         break;
 
       case "envido-result": {
@@ -468,8 +625,8 @@
         }, 1300);
         enqueue(() => {
           msg(ev.winner === "you"
-            ? `You win the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`
-            : `${OPP_CAP()} wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`);
+            ? t("youWinEnvido", ev.points)
+            : t("oppWinsEnvido", OPP_CAP(), ev.points));
         }, 1100);
         break;
       }
@@ -477,8 +634,8 @@
       case "envido-declined":
         enqueue(() => {
           msg(ev.caller === "you"
-            ? `Declined — you score ${ev.points}`
-            : `You declined — ${OPP_NAME()} scores ${ev.points}`);
+            ? t("declinedYouScore", ev.points)
+            : t("youDeclinedOppScores", OPP_NAME(), ev.points));
         }, 1000);
         break;
 
@@ -497,10 +654,10 @@
 
       case "hand-end":
         enqueue(() => {
-          const why = ev.reason === "mazo" ? " (fold)" : ev.reason === "no-quiero" ? " (no quiero)" : "";
+          const why = ev.reason === "mazo" ? t("whyFold") : ev.reason === "no-quiero" ? t("whyNoQuiero") : "";
           msg(ev.winner === "you"
-            ? `You win the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`
-            : `${OPP_CAP()} wins the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`);
+            ? t("youWinHand", ev.points, why)
+            : t("oppWinsHand", OPP_CAP(), ev.points, why));
         }, 1900);
         if (ev.winner === "ai" && !game.gameOver) taunt("winHand", 0.4);
         if (!game.gameOver) {
@@ -614,9 +771,9 @@
   /* cover the table so the incoming player can't see the outgoing hand */
   function showPassGate(seat) {
     el.dockButtons.innerHTML = "";
-    el.passgateTitle.textContent = (seat === "you" ? "PLAYER 1" : "PLAYER 2") + " — YOUR TURN";
+    el.passgateTitle.textContent = t("yourTurnP", seat === "you" ? t("player1") : t("player2"));
     el.passgate.classList.remove("hidden");
-    msg("Pass the device…");
+    msg(t("passDevice"));
   }
 
   function passGateReady() {
@@ -625,7 +782,7 @@
     el.passgate.classList.add("hidden");
     renderHands(false);
     renderChips();
-    msg(controller === game.toAct && !game.pending ? "Your move" : "Your answer?");
+    msg(controller === game.toAct && !game.pending ? t("yourMove") : t("yourAnswer"));
   }
 
   function showEndgame(winner) {
@@ -634,23 +791,23 @@
     div.className = "endgame";
     const won = winner === "you";
     const title = won
-      ? (local2 ? "PLAYER 1 WINS" : "YOU WIN")
-      : net ? `${esc((rivalName || "YOUR RIVAL").toUpperCase())} WINS`
-      : local2 ? "PLAYER 2 WINS" : `${esc(botName.toUpperCase())} WINS`;
+      ? (local2 ? t("p1Wins") : t("youWin"))
+      : net ? t("oppWins", esc((rivalName || "YOUR RIVAL").toUpperCase()))
+      : local2 ? t("p2Wins") : t("oppWins", esc(botName.toUpperCase()));
     // solo vs the bot: record the result and let it have the last word
     let extra = "";
     if (!net && !local2) {
       const s = Stats.record(won);
-      const streakTxt = s.streak > 1 ? ` · 🔥 ${s.streak} in a row` : "";
+      const streakTxt = s.streak > 1 ? t("inARow", s.streak) : "";
       extra = `<div class="endgame-taunt">“${esc(pickTaunt(won ? "loseGame" : "winGame"))}”</div>
-        <div class="endgame-stats">${s.wins}W — ${s.losses}L${streakTxt} · best streak ${s.best}</div>`;
+        <div class="endgame-stats">${t("record", s.wins, s.losses, streakTxt, s.best)}</div>`;
     }
     div.innerHTML = `
       <div class="endgame-inner">
         <div class="endgame-title">${title}</div>
         <div class="endgame-sub">${game.scores.you} — ${game.scores.ai}</div>
         ${extra}
-        <button class="btn btn-gold" id="btn-again">PLAY AGAIN</button>
+        <button class="btn btn-gold" id="btn-again">${t("playAgain")}</button>
       </div>`;
     document.body.appendChild(div);
     const btn = div.querySelector("#btn-again");
@@ -660,7 +817,7 @@
       else {
         Net.send({ t: "again" });
         btn.disabled = true;
-        btn.textContent = "WAITING FOR HOST…";
+        btn.textContent = t("waitingHost");
       }
     });
   }
@@ -717,7 +874,7 @@
 
   function renderStake4() {
     const v = Truco4.TRUCO_HAND_VALUE[game4.trucoLevel];
-    el.stakeLabel.textContent = `${v} POINT${v > 1 ? "S" : ""} ON THE TABLE`;
+    el.stakeLabel.textContent = t("pointsOnTable", v);
   }
 
   function renderPlates4() {
@@ -749,9 +906,7 @@
           renderStake4();
           renderHands4(true);
           renderPlates4();
-          msg(ev.mano === room.mySeat
-            ? "New hand — you are mano, you lead"
-            : `New hand — ${seatName(ev.mano)} is mano`);
+          msg(ev.mano === room.mySeat ? t("newHandYouMano4") : t("newHandMano4", seatName(ev.mano)));
         }, 700);
         break;
 
@@ -769,7 +924,7 @@
       case "turn":
         enqueue(() => {
           renderPlates4();
-          msg(ev.seat === room.mySeat ? "Your move" : `${seatName(ev.seat)} is thinking…`);
+          msg(ev.seat === room.mySeat ? t("yourMove") : t("seatThinking", seatName(ev.seat)));
         }, 80);
         break;
 
@@ -782,9 +937,9 @@
             card.classList.add(seat === ev.winnerSeat ? "trick-win" : "trick-lose");
           }
           renderPips4();
-          msg(ev.winner === "tie" ? "¡Parda! — tied trick" :
-              ev.winnerSeat === room.mySeat ? "You take the trick" :
-              `${seatName(ev.winnerSeat)} takes the trick`);
+          msg(ev.winner === "tie" ? t("parda") :
+              ev.winnerSeat === room.mySeat ? t("youTakeTrick4") :
+              t("seatTakesTrick", seatName(ev.winnerSeat)));
         }, 1300);
         enqueue(() => clearBattle(), 150);
         break;
@@ -795,9 +950,9 @@
           bubbleAt(seatPos(ev.seat), text);
           if (["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name)) flash(text);
           const mustAnswer = game4.pending && game4.legalActions(room.mySeat).length;
-          msg(ev.seat === room.mySeat ? "Waiting for an answer…" :
-              mustAnswer ? `${seatName(ev.seat)} calls — your side answers` :
-              `${seatName(ev.seat)} calls…`);
+          msg(ev.seat === room.mySeat ? t("waitingAnswer") :
+              mustAnswer ? t("seatCallsAnswer", seatName(ev.seat)) :
+              t("seatCalls", seatName(ev.seat)));
           renderPlates4();
         }, ["Truco", "Retruco", "Vale Cuatro", "Falta Envido"].includes(ev.name) ? 1400 : 900);
         break;
@@ -829,8 +984,8 @@
         }
         enqueue(() => {
           msg(ev.winnerTeam === myTeam()
-            ? `Your team wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`
-            : `${seatName(ev.winnerSeat)}'s team wins the envido — ${ev.points} point${ev.points > 1 ? "s" : ""}`);
+            ? t("teamWinsEnvido", ev.points)
+            : t("seatTeamEnvido", seatName(ev.winnerSeat), ev.points));
         }, 1100);
         break;
       }
@@ -838,8 +993,8 @@
       case "envido-declined":
         enqueue(() => {
           msg(ev.callerTeam === myTeam()
-            ? `Declined — your team scores ${ev.points}`
-            : `Declined — ${seatName(ev.callerSeat)}'s team scores ${ev.points}`);
+            ? t("teamDeclined", ev.points)
+            : t("seatTeamDeclined", seatName(ev.callerSeat), ev.points));
         }, 1000);
         break;
 
@@ -857,10 +1012,10 @@
 
       case "hand-end":
         enqueue(() => {
-          const why = ev.reason === "mazo" ? " (fold)" : ev.reason === "no-quiero" ? " (no quiero)" : "";
+          const why = ev.reason === "mazo" ? t("whyFold") : ev.reason === "no-quiero" ? t("whyNoQuiero") : "";
           msg(ev.winner === myTeam()
-            ? `Your team wins the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`
-            : `They win the hand — ${ev.points} point${ev.points > 1 ? "s" : ""}${why}`);
+            ? t("teamWinsHand", ev.points, why)
+            : t("theyWinHand", ev.points, why));
         }, 1900);
         if (!game4.gameOver && room.role === "host") {
           // host deals the next hand and broadcasts it; guests wait for it
@@ -1005,13 +1160,13 @@
     const div = document.createElement("div");
     div.className = "endgame";
     const mates = [winnerTeam, winnerTeam + 2]
-      .map((s) => (s === room.mySeat ? "YOU" : esc(room.seats[s].name.toUpperCase())));
-    const title = winnerTeam === myTeam() ? "YOUR TEAM WINS" : `${mates.join(" & ")} WIN`;
+      .map((s) => (s === room.mySeat ? t("you") : esc(room.seats[s].name.toUpperCase())));
+    const title = winnerTeam === myTeam() ? t("yourTeamWins") : t("teamWins", mates.join(" & "));
     div.innerHTML = `
       <div class="endgame-inner">
         <div class="endgame-title">${title}</div>
         <div class="endgame-sub">${game4.scores[myTeam()]} — ${game4.scores[1 - myTeam()]}</div>
-        <button class="btn btn-gold" id="btn-again">PLAY AGAIN</button>
+        <button class="btn btn-gold" id="btn-again">${t("playAgain")}</button>
       </div>`;
     document.body.appendChild(div);
     const btn = div.querySelector("#btn-again");
@@ -1020,7 +1175,7 @@
       else {
         Net.send({ t: "again" });
         btn.disabled = true;
-        btn.textContent = "WAITING FOR HOST…";
+        btn.textContent = t("waitingHost");
       }
     });
   }
@@ -1042,7 +1197,7 @@
         { kind: "open", name: "", connId: null },
       ],
     };
-    showOverlay("YOUR 2v2 TABLE", "Summoning a table…");
+    showOverlay(t("your2v2"), t("summoning"));
     Net.hostRoom({
       onReady: (code) => {
         room.code = code;
@@ -1193,8 +1348,8 @@
     el.playedLeft.classList.remove("hidden");
     el.playedRight.classList.remove("hidden");
     for (const p of [el.plateTop, el.plateLeft, el.plateRight, el.plateYou]) p.classList.remove("hidden");
-    el.labelYou.textContent = "US";
-    el.labelOpp.textContent = "THEM";
+    el.labelYou.textContent = t("us");
+    el.labelOpp.textContent = t("them");
     el.btnChat.classList.remove("hidden");
     el.btnName.classList.remove("hidden");
     renderScores4();
@@ -1348,20 +1503,20 @@
     row.className = "lobby-seat " + (s.kind === "open" ? "empty" : "filled");
     const team = document.createElement("span");
     team.className = `lobby-team team-${seat % 2}`;
-    team.textContent = seat % 2 === 0 ? "TEAM GOLD" : "TEAM BLUE";
+    team.textContent = seat % 2 === 0 ? t("teamGold") : t("teamBlue");
     const name = document.createElement("span");
     name.className = "lobby-name";
     if (s.kind === "open") {
-      name.textContent = "Waiting for a player…";
+      name.textContent = t("waitingPlayer");
     } else {
       name.textContent = s.name;
       const tag = document.createElement("span");
       tag.className = "lobby-tag";
       tag.textContent =
-        s.kind === "bot" ? "  · BOT" :
-        (room && seat === room.mySeat) ? "  · YOU" :
-        (isHost && seat === 0) ? "  · HOST" : "";
-      if (!isHost && seat === 0) tag.textContent = "  · HOST";
+        s.kind === "bot" ? t("tagBot") :
+        (room && seat === room.mySeat) ? t("tagYou") :
+        (isHost && seat === 0) ? t("tagHost") : "";
+      if (!isHost && seat === 0) tag.textContent = t("tagHost");
       name.appendChild(tag);
     }
     row.appendChild(team);
@@ -1372,10 +1527,10 @@
       const sw = document.createElement("button");
       sw.className = "lobby-btn lobby-btn-swap";
       if (seat === swapPick) {
-        sw.textContent = "✕ CANCEL";
+        sw.textContent = t("cancelSwap");
         sw.addEventListener("click", () => { swapPick = null; renderLobbyHost(); });
       } else {
-        sw.textContent = "↕ SWAP HERE";
+        sw.textContent = t("swapHere");
         sw.addEventListener("click", () => {
           const a = swapPick; swapPick = null; swapSeats(a, seat);
         });
@@ -1385,7 +1540,7 @@
       if (s.kind === "open") {
         const add = document.createElement("button");
         add.className = "lobby-btn";
-        add.textContent = "+ ADD BOT";
+        add.textContent = t("addBot");
         add.addEventListener("click", () => {
           room.seats[seat] = { kind: "bot", name: pickBotName(), connId: null };
           broadcastRoster();
@@ -1396,7 +1551,7 @@
       if (s.kind === "bot") {
         const rm = document.createElement("button");
         rm.className = "lobby-btn lobby-btn-remove";
-        rm.textContent = "REMOVE";
+        rm.textContent = t("remove");
         rm.addEventListener("click", () => {
           room.seats[seat] = { kind: "open", name: "", connId: null };
           broadcastRoster();
@@ -1409,7 +1564,7 @@
       if (s.kind !== "open") {
         const sw = document.createElement("button");
         sw.className = "lobby-btn lobby-btn-swap";
-        sw.textContent = "↕ TEAM";
+        sw.textContent = t("teamBtn");
         sw.addEventListener("click", () => { swapPick = seat; renderLobbyHost(); });
         row.appendChild(sw);
       }
@@ -1437,8 +1592,7 @@
   }
 
   function showLobbyHost(url, code) {
-    showOverlay("YOUR 2v2 TABLE", "Share the code — friends take seats as they arrive.",
-      { code: code || room.code, link: url });
+    showOverlay(t("your2v2"), t("lobbyHostStatus"), { code: code || room.code, link: url });
     renderLobbyHost();
   }
 
@@ -1448,17 +1602,16 @@
     const ready = room.seats.every((s) => s.kind !== "open");
     el.btnStart2v2.classList.remove("hidden");
     el.btnStart2v2.disabled = !ready;
-    el.btnStart2v2.textContent = ready ? "START GAME" : "FILL ALL 4 SEATS TO START";
+    el.btnStart2v2.textContent = ready ? t("startReady") : t("startFill");
     el.btnLobbyChat.classList.toggle("hidden", Net.roomSize() === 0);
     el.btnLobbyName.classList.remove("hidden");
     el.onlineStatus.textContent =
-      swapPick !== null ? "Pick the seat to switch with — swapping changes teams." :
-      ready ? "Table full — deal the cards! (↕ TEAM to rearrange sides)" :
-      "Share the code — friends take seats as they arrive. Short a player? Add a bot.";
+      swapPick !== null ? t("lobbySwap") :
+      ready ? t("lobbyFull") : t("lobbyShare");
   }
 
   function renderLobbyGuest() {
-    showOverlay("AT THE TABLE", "Waiting for the host to start the game…");
+    showOverlay(t("atTheTable"), t("lobbyWaitStart"));
     renderRoster(false);
     el.btnLobbyChat.classList.remove("hidden");
     el.btnLobbyName.classList.remove("hidden");
@@ -1589,10 +1742,11 @@
     el.onlineOverlay.classList.add("hidden");
     el.splash.classList.add("gone");
     el.stage.classList.remove("hidden");
+    el.langToggle.classList.add("hidden");      // language switch lives on the main screen
     if (!game4) {
-      el.labelYou.textContent = local2 ? "PLAYER 1" : "YOU";
+      el.labelYou.textContent = local2 ? t("player1") : t("you");
       el.labelOpp.textContent = net ? (rivalName || "RIVAL").toUpperCase()
-        : local2 ? "PLAYER 2" : botName.toUpperCase();
+        : local2 ? t("player2") : botName.toUpperCase();
       el.btnChat.classList.toggle("hidden", !net);
       el.btnName.classList.toggle("hidden", !net);
     }
@@ -1624,8 +1778,8 @@
     game = new Truco.Game();
     queue = [];
     busy = false;
-    el.labelYou.textContent = "PLAYER 1";
-    el.labelOpp.textContent = "PLAYER 2";
+    el.labelYou.textContent = t("player1");
+    el.labelOpp.textContent = t("player2");
     renderScores();
     sync();
   }
@@ -1668,6 +1822,7 @@
     closeNamePanel();
     resetChat();
     renderSplashStats();
+    el.langToggle.classList.remove("hidden");
     el.splash.classList.remove("gone");
   }
 
@@ -1819,7 +1974,7 @@
 
   /* ---------- online overlay ---------- */
 
-  function showOverlay(title, status, { link = null, code = null, hint = false, cancelLabel = "CANCEL" } = {}) {
+  function showOverlay(title, status, { link = null, code = null, hint = false, cancelLabel = null } = {}) {
     el.onlineTitle.textContent = title;
     el.onlineStatus.textContent = status;
     el.onlineNamebox.classList.add("hidden");
@@ -1834,9 +1989,9 @@
     el.onlineCodebox.classList.toggle("hidden", !code);
     el.onlineLinkbox.classList.toggle("hidden", !link);
     el.onlineHint.classList.toggle("hidden", !hint);
-    el.btnOnlineCancel.textContent = cancelLabel;
-    el.btnCopyLink.textContent = "OR COPY A LINK";
-    el.btnCopyCode.textContent = "COPY";
+    el.btnOnlineCancel.textContent = cancelLabel || t("cancel");
+    el.btnCopyLink.textContent = t("orCopyLink");
+    el.btnCopyCode.textContent = t("copy");
     if (code) el.onlineCode.textContent = code.toUpperCase();
     if (link) {
       el.onlineLink.value = link;
@@ -1846,7 +2001,7 @@
   }
 
   function showNotice(title, text) {
-    showOverlay(title, text, { cancelLabel: "BACK" });
+    showOverlay(title, text, { cancelLabel: t("back") });
   }
 
   function closeOverlay() {
@@ -1897,7 +2052,7 @@
       showNotice("PLAY ONLINE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
       return;
     }
-    showOverlay("PLAY ONLINE", "Pick your table — 1v1 duel or 2v2 with partners.");
+    showOverlay("PLAY ONLINE", t("pickTable"));
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
     el.onlineNamebox.classList.remove("hidden");
     el.onlineModes.classList.remove("hidden");
@@ -2060,7 +2215,8 @@
 
   /* ---------- rules overlay ---------- */
 
-  el.rulesContent.innerHTML = `
+  const RULES_HTML = {
+    en: `
     <h3>The Goal</h3>
     <p>First to <strong>30 points</strong>. Each hand you get 3 cards and play up to 3 tricks — win <strong>2 of 3 tricks</strong> to take the hand.</p>
     <h3>Card Power (high → low)</h3>
@@ -2079,18 +2235,94 @@
     <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table — <strong>1v1</strong> or <strong>2v2</strong> — and shows a short <strong>table code</strong>. Share the code; friends pick <strong>JOIN GAME</strong> and type it in. The cards fly when everyone is seated. There's a table-talk chat, and empty 2v2 seats can be filled with bots.</p>
     <p><strong>Dropped out?</strong> Just enter the same code again to rejoin — the hand picks up exactly where it left off. (A shareable link still works too.)</p>
     <h3>2v2 Team Rules</h3>
-    <p>Seats alternate teams; your partner sits across the table. The highest card wins the trick for its <strong>team</strong> — if the top cards split between teams it's a parda. Envido is declared from the mano around the table (ties favor whoever is closer to mano), and either member of a team may answer the other side's calls. Folding concedes for your whole team.</p>`;
+    <p>Seats alternate teams; your partner sits across the table. The highest card wins the trick for its <strong>team</strong> — if the top cards split between teams it's a parda. Envido is declared from the mano around the table (ties favor whoever is closer to mano), and either member of a team may answer the other side's calls. Folding concedes for your whole team.</p>`,
+    es: `
+    <h3>El objetivo</h3>
+    <p>Primero a <strong>30 puntos</strong>. En cada mano recibís 3 cartas y se juegan hasta 3 bazas — ganá <strong>2 de 3 bazas</strong> para llevarte la mano.</p>
+    <h3>Poder de las cartas (mayor → menor)</h3>
+    <p><strong>1 de espadas</strong> · <strong>1 de bastos</strong> · <strong>7 de espadas</strong> · <strong>7 de oros</strong> · los 3 · los 2 · 1 de copas/oros · los 12 · los 11 · los 10 · 7 de copas/bastos · los 6 · los 5 · los 4</p>
+    <p><em>Por lo demás el palo no importa — cartas iguales empatan (parda), y los empates favorecen al que ganó la baza más temprana, o a la mano.</em></p>
+    <h3>Envido</h3>
+    <p>Se canta en la primera baza, antes de jugar tu primera carta. Dos cartas del mismo palo valen su suma <strong>+ 20</strong> (las figuras cuentan 0). El máximo: 33.</p>
+    <p>El canto inicial es siempre <strong>Envido</strong> (2 ptos). Quien responde puede subir: <strong>Envido</strong> otra vez, <strong>Real Envido</strong> (+3), o <strong>Falta Envido</strong> — los puntos que faltan para terminar el juego. Los cantos se acumulan (Envido + Envido + Real = 7). Si no querés, el que cantó suma lo anterior (mínimo 1).</p>
+    <h3>Truco</h3>
+    <p>Subí el valor de la mano cuando quieras: <strong>Truco</strong> (2) → <strong>Retruco</strong> (3) → <strong>Vale Cuatro</strong> (4). Solo el lado que dijo "quiero" puede volver a subir. Si no querés, el que cantó se lleva el valor anterior.</p>
+    <h3>El bluff</h3>
+    <p>Mentir es legal y esperado. Cantá truco con cualquier cosa. No quieras nada. No confíes en nadie — y menos en El Monolito.</p>
+    <h3>Me voy al mazo</h3>
+    <p>Abandonás la mano y entregás lo que está en juego. En la primera baza, antes del envido, cuesta 2 puntos.</p>
+    <h3>Jugar online</h3>
+    <p>Desde la portada, <strong>JUGAR ONLINE</strong> abre una mesa privada — <strong>1v1</strong> o <strong>2v2</strong> — y muestra un <strong>código de mesa</strong> corto. Compartí el código; tus amigos eligen <strong>ENTRAR</strong> y lo escriben. Las cartas vuelan cuando están todos sentados. Hay charla de mesa, y los asientos 2v2 vacíos se pueden llenar con bots.</p>
+    <p><strong>¿Te desconectaste?</strong> Volvé a ingresar el mismo código para reincorporarte — la mano sigue justo donde la dejaste. (El enlace para compartir también sirve.)</p>
+    <h3>Reglas 2v2 (en equipo)</h3>
+    <p>Los asientos alternan equipos; tu compañero se sienta enfrente. La carta más alta gana la baza para su <strong>equipo</strong> — si las cartas más altas se reparten entre equipos, es parda. El envido se declara desde la mano alrededor de la mesa (los empates favorecen al más cercano a la mano), y cualquiera del equipo puede responder los cantos del otro lado. Irse al mazo entrega por todo tu equipo.</p>`,
+  };
 
   /* ---------- boot ---------- */
+
+  /* apply the chosen language to the static chrome (the rest reads `lang`
+     through t() when it renders). The toggle lives on the main screen, so
+     language is normally chosen before opening any menu or game. */
+  function applyLang() {
+    document.documentElement.lang = lang;
+    el.langToggle.textContent = lang === "en" ? "ES" : "EN";
+    el.splashTag.textContent = t("splashTag");
+    el.btnStart.textContent = t("dealMeIn");
+    el.btnOnline.textContent = t("playOnline");
+    el.btnJoinGame.textContent = t("joinGame");
+    el.btnRules.textContent = t("howToPlay");
+    // solo overlay
+    el.soloOverlay.querySelector("h2").textContent = t("dealMeIn");
+    el.soloOverlay.querySelector(".online-status").textContent = t("soloStatus");
+    el.btnSoloBot.textContent = t("playBot");
+    el.btnSoloLocal.textContent = t("passPlay");
+    el.soloOverlay.querySelector(".solo-hint").textContent = t("soloHint");
+    el.btnSoloCancel.textContent = t("back");
+    // pass gate
+    el.passgate.querySelector(".passgate-sub").textContent = t("passSub");
+    el.passgateGo.textContent = t("ready");
+    // rules
+    el.rulesOverlay.querySelector("h2").textContent = t("howToPlay");
+    el.btnCloseRules.textContent = t("back");
+    el.rulesContent.innerHTML = RULES_HTML[lang] || RULES_HTML.en;
+    // online + name + chat chrome
+    for (const lab of document.querySelectorAll('label[for="online-name"], label[for="name-input"]'))
+      lab.textContent = t("yourName");
+    const joinLab = document.querySelector('label[for="join-code"]');
+    if (joinLab) joinLab.textContent = t("tableCode");
+    const codeLab = document.querySelector(".online-codelabel");
+    if (codeLab) codeLab.textContent = t("tableCode");
+    const codeHint = document.querySelector(".online-codehint");
+    if (codeHint) codeHint.textContent = t("codeHint");
+    el.btnCopyLink.textContent = t("orCopyLink");
+    el.btnShareLink.textContent = t("share");
+    el.btnJoinGo.textContent = t("joinTable");
+    el.btnJoin2v2.textContent = t("joinTable");
+    el.btnLobbyName.textContent = t("editName");
+    if (el.btnLobbyChat.firstChild) el.btnLobbyChat.firstChild.nodeValue = t("tableTalkBtn");
+    el.btnNameSave.textContent = t("save");
+    el.chatPanel.querySelector(".chat-title").textContent = t("tableTalk");
+    el.chatInput.placeholder = t("sayThis");
+    el.onlineName.placeholder = t("playerPH");
+    el.nameInput.placeholder = t("playerPH");
+  }
 
   function renderSplashStats() {
     const s = Stats.get();
     if (s.wins + s.losses === 0) { el.splashStats.classList.add("hidden"); return; }
     const streakTxt = s.streak > 1 ? ` · 🔥 ${s.streak}` : "";
-    el.splashStats.textContent = `Solo record: ${s.wins}W — ${s.losses}L${streakTxt} · best ${s.best}`;
+    el.splashStats.textContent = t("soloRecord", s.wins, s.losses, streakTxt, s.best);
     el.splashStats.classList.remove("hidden");
   }
+  applyLang();
   renderSplashStats();
+
+  el.langToggle.addEventListener("click", () => {
+    lang = lang === "en" ? "es" : "en";
+    localStorage.setItem("monolito-lang", lang);
+    applyLang();
+    renderSplashStats();
+  });
 
   el.btnStart.addEventListener("click", () => el.soloOverlay.classList.remove("hidden"));
   el.btnSoloCancel.addEventListener("click", () => el.soloOverlay.classList.add("hidden"));
@@ -2138,14 +2370,14 @@
 
   el.btnCopyCode.addEventListener("click", async () => {
     await copyText(myTableCode ? myTableCode.toUpperCase() : el.onlineCode.textContent);
-    el.btnCopyCode.textContent = "COPIED ✓";
-    setTimeout(() => { el.btnCopyCode.textContent = "COPY"; }, 1600);
+    el.btnCopyCode.textContent = t("copied");
+    setTimeout(() => { el.btnCopyCode.textContent = t("copy"); }, 1600);
   });
 
   el.btnCopyLink.addEventListener("click", async () => {
     await copyText(el.onlineLink.value);
-    el.btnCopyLink.textContent = "COPIED ✓";
-    setTimeout(() => { el.btnCopyLink.textContent = "OR COPY A LINK"; }, 1600);
+    el.btnCopyLink.textContent = t("copied");
+    setTimeout(() => { el.btnCopyLink.textContent = t("orCopyLink"); }, 1600);
   });
 
   el.btnShareLink.addEventListener("click", () => {
@@ -2181,7 +2413,7 @@
     const code = activeCode();
     if (!code) return;
     await copyText(code.toUpperCase());
-    el.hudCode.textContent = "COPIED ✓";
+    el.hudCode.textContent = t("copied");
     setTimeout(renderHudCode, 1400);
   });
   el.btnNameSave.addEventListener("click", applyRename);
