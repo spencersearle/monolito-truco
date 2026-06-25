@@ -501,6 +501,18 @@ body {
 
 .lobby-btn.lobby-btn-remove:hover { border-color: rgba(224, 82, 82, .8); box-shadow: 0 0 14px rgba(224, 82, 82, .25); }
 
+.lobby-btn.lobby-btn-swap {
+  border-color: rgba(212, 160, 42, .5);
+  color: var(--gold-bright);
+  background: rgba(60, 44, 10, .35);
+}
+.lobby-btn.lobby-btn-swap:hover { border-color: var(--gold-bright); box-shadow: 0 0 14px rgba(242, 201, 76, .3); }
+
+.lobby-seat.swap-pick {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 16px rgba(242, 201, 76, .35);
+}
+
 /* ---------- stage layout ---------- */
 
 .stage {

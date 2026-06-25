@@ -94,6 +94,7 @@
   let awaitingEcho = false;    // 2v2 guest: sent an intent, waiting for host's broadcast
   let echoTimer = null;
   let botTimer = null;
+  let swapPick = null;         // 2v2 host lobby: first seat picked for a team swap
 
   let queue = [];
   let busy = false;
@@ -967,6 +968,7 @@
   }
 
   function openTable4() {
+    swapPick = null;
     room = {
       role: "host", code: null, mySeat: 0, started: false,
       seats: [
@@ -1027,6 +1029,7 @@
           return;
         }
         room.seats[free] = { kind: "human", name: cleanName(m.name), connId: id };
+        swapPick = null;
         broadcastRoster();
         renderLobbyHost();
         chatSys(`${room.seats[free].name} joined the table`);
@@ -1067,6 +1070,7 @@
 
   function hostSeatLost(seat) {
     const name = room.seats[seat].name;
+    swapPick = null;                    // membership changed — drop any pending swap
     if (!room.started) {
       room.seats[seat] = { kind: "open", name: "", connId: null };
       broadcastRoster();
@@ -1096,6 +1100,7 @@
   }
 
   function hostBegin4() {
+    swapPick = null;
     room.started = true;
     const fixed = Truco4.freshDeal4();
     const mano = Math.floor(Math.random() * 4);
@@ -1297,29 +1302,66 @@
     }
     row.appendChild(team);
     row.appendChild(name);
-    if (isHost && s.kind === "open") {
-      const add = document.createElement("button");
-      add.className = "lobby-btn";
-      add.textContent = "+ ADD BOT";
-      add.addEventListener("click", () => {
-        room.seats[seat] = { kind: "bot", name: pickBotName(), connId: null };
-        broadcastRoster();
-        renderLobbyHost();
-      });
-      row.appendChild(add);
-    }
-    if (isHost && s.kind === "bot") {
-      const rm = document.createElement("button");
-      rm.className = "lobby-btn lobby-btn-remove";
-      rm.textContent = "REMOVE";
-      rm.addEventListener("click", () => {
-        room.seats[seat] = { kind: "open", name: "", connId: null };
-        broadcastRoster();
-        renderLobbyHost();
-      });
-      row.appendChild(rm);
+    if (seat === swapPick) row.classList.add("swap-pick");
+    if (isHost && swapPick !== null) {
+      // swap mode: every seat is either the picked one (cancel) or a target
+      const sw = document.createElement("button");
+      sw.className = "lobby-btn lobby-btn-swap";
+      if (seat === swapPick) {
+        sw.textContent = "✕ CANCEL";
+        sw.addEventListener("click", () => { swapPick = null; renderLobbyHost(); });
+      } else {
+        sw.textContent = "↕ SWAP HERE";
+        sw.addEventListener("click", () => {
+          const a = swapPick; swapPick = null; swapSeats(a, seat);
+        });
+      }
+      row.appendChild(sw);
+    } else if (isHost) {
+      if (s.kind === "open") {
+        const add = document.createElement("button");
+        add.className = "lobby-btn";
+        add.textContent = "+ ADD BOT";
+        add.addEventListener("click", () => {
+          room.seats[seat] = { kind: "bot", name: pickBotName(), connId: null };
+          broadcastRoster();
+          renderLobbyHost();
+        });
+        row.appendChild(add);
+      }
+      if (s.kind === "bot") {
+        const rm = document.createElement("button");
+        rm.className = "lobby-btn lobby-btn-remove";
+        rm.textContent = "REMOVE";
+        rm.addEventListener("click", () => {
+          room.seats[seat] = { kind: "open", name: "", connId: null };
+          broadcastRoster();
+          renderLobbyHost();
+        });
+        row.appendChild(rm);
+      }
+      // any occupied seat can start a team swap (swapping changes team, since
+      // teams alternate by seat: 0&2 vs 1&3)
+      if (s.kind !== "open") {
+        const sw = document.createElement("button");
+        sw.className = "lobby-btn lobby-btn-swap";
+        sw.textContent = "↕ TEAM";
+        sw.addEventListener("click", () => { swapPick = seat; renderLobbyHost(); });
+        row.appendChild(sw);
+      }
     }
     return row;
+  }
+
+  /* host: swap two lobby seats — moves players (and their team) and keeps
+     every screen's seat index in sync */
+  function swapSeats(a, b) {
+    if (a === b || !room || room.role !== "host" || room.started) return;
+    [room.seats[a], room.seats[b]] = [room.seats[b], room.seats[a]];
+    if (room.mySeat === a) room.mySeat = b;
+    else if (room.mySeat === b) room.mySeat = a;
+    broadcastRoster();
+    renderLobbyHost();
   }
 
   function renderRoster(isHost) {
@@ -1345,9 +1387,10 @@
     el.btnStart2v2.textContent = ready ? "START GAME" : "FILL ALL 4 SEATS TO START";
     el.btnLobbyChat.classList.toggle("hidden", Net.roomSize() === 0);
     el.btnLobbyName.classList.remove("hidden");
-    el.onlineStatus.textContent = ready
-      ? "Table full — deal the cards!"
-      : "Share the code — friends take seats as they arrive. Short a player? Add a bot.";
+    el.onlineStatus.textContent =
+      swapPick !== null ? "Pick the seat to switch with — swapping changes teams." :
+      ready ? "Table full — deal the cards! (↕ TEAM to rearrange sides)" :
+      "Share the code — friends take seats as they arrive. Short a player? Add a bot.";
   }
 
   function renderLobbyGuest() {
