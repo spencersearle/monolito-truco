@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0" stop-color="#0c1f47"/>
+      <stop offset="0.55" stop-color="#071534"/>
+      <stop offset="1" stop-color="#040a1c"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6d579"/>
+      <stop offset="0.5" stop-color="#f2c94c"/>
+      <stop offset="1" stop-color="#c9982a"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d4a02a" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#f2c94c" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#d4a02a" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#f2c94c" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f2c94c" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- soft central glow -->
+  <circle cx="256" cy="232" r="190" fill="url(#glow)"/>
+
+  <!-- concentric monolito emblem (kept within maskable safe zone) -->
+  <circle cx="256" cy="232" r="148" fill="none" stroke="url(#gold)" stroke-width="14"/>
+  <circle cx="256" cy="232" r="104" fill="#0a1a3a"/>
+  <circle cx="256" cy="232" r="104" fill="none" stroke="url(#gold)" stroke-width="6" stroke-opacity="0.6"/>
+
+  <!-- the monolith: a tall standing slab -->
+  <rect x="226" y="150" width="60" height="164" rx="8" fill="url(#gold)"/>
+  <rect x="226" y="150" width="60" height="164" rx="8" fill="none" stroke="#0a1a3a" stroke-width="3" stroke-opacity="0.35"/>
+  <rect x="240" y="168" width="32" height="6" rx="3" fill="#0a1a3a" fill-opacity="0.4"/>
+
+  <!-- flowing gold table wave near the bottom -->
+  <path fill="url(#wave)" d="M40,420 C140,388 200,452 300,420 C380,394 420,452 472,424 L472,452 C420,480 380,420 300,448 C200,480 140,416 40,448 Z"/>
+</svg>

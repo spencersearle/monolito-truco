@@ -65,6 +65,41 @@ Under the hood:
   two mirrored engines) and `node test_multiplayer_sim4.js` (200 2v2 games
   across four engines) assert the replicas never diverge
 
+## Install it as an app
+
+Monolito is a **Progressive Web App** — installable straight from the browser,
+no app store needed, and it still ships as static files on GitHub Pages.
+
+- **iPhone / iPad (Safari):** Share → **Add to Home Screen**.
+- **Android (Chrome):** menu **⋮** → **Install app** (or the install prompt).
+- **Desktop (Chrome/Edge):** the **install icon** in the address bar.
+
+Once installed it launches full-screen with its own icon, and the app shell is
+cached by a service worker, so **solo play vs the AI works fully offline**.
+(Online 1v1 / 2v2 still needs a connection — it's peer-to-peer over WebRTC.)
+
+> Heads up: after changing any cached asset, bump `CACHE_VERSION` in `sw.js`
+> so installed clients pull the new files.
+
+### Toward the App Store / Google Play
+
+The same web build is wrapped into native iOS/Android apps with
+[Capacitor](https://capacitorjs.com) — the PWA above is the foundation. The
+short version when you're ready to ship to stores:
+
+```sh
+npm init -y
+npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android
+npx cap init Monolito com.spencersearle.monolito --web-dir .
+npx cap add ios && npx cap add android
+npx cap sync
+npx cap open ios      # build/submit in Xcode  (needs an Apple Developer account)
+npx cap open android  # build/submit in Android Studio  (Google Play account)
+```
+
+The app icons in this repo (`icon-512.png`, etc.) double as the store-icon
+source. Online multiplayer keeps working unchanged inside the native shell.
+
 ## The cards
 
 All 40 cards of the baraja española are drawn programmatically in SVG
@@ -86,6 +121,10 @@ python3 -m http.server 8000
 | File | What it is |
 |---|---|
 | `index.html` | Page shell |
+| `manifest.webmanifest` | PWA manifest: name, icons, theme, standalone display |
+| `sw.js` | Service worker: caches the app shell for offline solo play |
+| `icon.svg` | Master app-icon artwork (navy/gold), source for the PNGs |
+| `icon-*.png` / `apple-touch-icon.png` | Rasterized install icons (incl. maskable) |
 | `styles.css` | Midnight-holotable theme: blue gradients, gold waves, 3D table |
 | `cards.js` | SVG renderer for the 40-card Spanish deck |
 | `engine.js` | Pure 1v1 rules engine (no DOM — also runs in Node) |

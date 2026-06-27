@@ -11,6 +11,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'&gt;&lt;circle cx='50' cy='50' r='42' fill='%23d4a02a'/&gt;&lt;circle cx='50' cy='50' r='30' fill='%230a1a3a'/&gt;&lt;circle cx='50' cy='50' r='18' fill='%23f2c94c'/&gt;&lt;/svg&gt;">
+
+  <!-- Progressive Web App: installable + offline play vs the AI -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Monolito">
 </head>
 <body>
 
@@ -265,5 +273,16 @@
   <script src="ai4.js"></script>
   <script src="net.js"></script>
   <script src="ui.js"></script>
+
+  <!-- Register the service worker (installable PWA + offline play) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (err) {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
