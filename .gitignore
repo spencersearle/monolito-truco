@@ -1,2 +1,16 @@
 .DS_Store
 __pycache__/
+
+# Node / Capacitor
+node_modules/
+www/
+
+# Capacitor copies the web assets into the native projects on `cap sync`;
+# they're regenerated, so they don't need to be tracked.
+ios/App/App/public/
+android/app/src/main/assets/public/
+
+# Native build output
+*.apk
+*.aab
+*.ipa

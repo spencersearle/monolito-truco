@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Monolito</string>
+    <string name="title_activity_main">Monolito</string>
+    <string name="package_name">com.spencersearle.monolito</string>
+    <string name="custom_url_scheme">com.spencersearle.monolito</string>
+</resources>
