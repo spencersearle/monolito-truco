@@ -140,5 +140,3 @@ python3 -m http.server 8000
 | `test_multiplayer_sim4.js` | Lockstep fuzz for 2v2: host + 3 guest engines |
 | `RULES.md` | The verified rules spec with sources |
 | `truco_game.py` | The original tkinter prototype this project grew from |
-
-Built for the CS 111 free coding project.
