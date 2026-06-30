@@ -2,7 +2,7 @@
    Makes the game installable and fully playable offline (vs the AI).
    Bump CACHE_VERSION whenever any cached asset changes so clients refresh. */
 
-const CACHE_VERSION = 'monolito-v1';
+const CACHE_VERSION = 'monolito-v2';
 const CACHE_NAME = `${CACHE_VERSION}`;
 
 // App shell: everything needed to boot and play solo vs the AI, offline.

@@ -26,12 +26,21 @@
 
 html, body { height: 100%; }
 
+/* The table (150vw) and the gold waves (200%) deliberately bleed past the
+   viewport edges. On mobile the document element is the scroller, so clipping
+   must live on <html> — body overflow alone lets iOS pan the table sideways. */
+html {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   font-family: var(--font-hud);
   color: var(--cream);
   background:
     radial-gradient(120% 90% at 50% -10%, var(--royal) 0%, var(--navy) 45%, var(--abyss) 100%);
   overflow: hidden;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
