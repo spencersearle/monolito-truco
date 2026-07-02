@@ -26,8 +26,9 @@ Once this is pushed to GitHub:
 2. When it finishes, download the artifact:
    - **Android:** `android-builds` → a **debug APK** you can install on an
      Android phone, plus a **release AAB** for the Play Store.
-   - **iOS:** the default job is an unsigned compile check; an installable
-     `.ipa` needs signing (below).
+   - **iOS:** the default job is an unsigned compile check. The signed
+     `archive-and-export` job (which produces an uploadable `.ipa`) is wired up
+     and ready — it stays dormant until you add the signing secrets below.
 
 Pushing to `main` also kicks off the Android build automatically.
 
@@ -45,17 +46,45 @@ These need a human + an account, so they can't be fully automated:
 
 ### iOS signing (the only Mac-friendly part)
 
-To produce an App Store `.ipa` in CI, add these GitHub repo secrets
-(Settings → Secrets and variables → Actions), then uncomment the
-`archive-and-export` job in `.github/workflows/ios.yml`:
+The signed `archive-and-export` job in `.github/workflows/ios.yml` is already
+written — **no code to uncomment**. It stays skipped until you flip a switch and
+add the signing secrets, so the repo is safe to leave as-is until you enroll.
 
-- `BUILD_CERT_P12_BASE64` — your Apple distribution cert (.p12), base64-encoded
-- `P12_PASSWORD` — the .p12 password
-- `PROVISIONING_PROFILE_BASE64` — the distribution provisioning profile, base64
+To turn it on (Settings → Secrets and variables → Actions):
 
-Exporting the cert/profile is the one step that's smoothest on a Mac (we have
-Xcode 26 here). Alternatively, services like **EAS Build** or **Codemagic** can
-manage iOS signing entirely in the cloud if you'd rather avoid the Mac step.
+**1. Add these repository *secrets*:**
+
+| Secret | What it is |
+|---|---|
+| `BUILD_CERT_P12_BASE64` | your Apple **Distribution** certificate (`.p12`), base64-encoded |
+| `P12_PASSWORD` | the password you set when exporting the `.p12` |
+| `PROVISIONING_PROFILE_BASE64` | the App Store provisioning profile, base64-encoded |
+| `APPLE_TEAM_ID` | your 10-character Team ID (App Store Connect → Membership) |
+
+Base64-encode a file with: `base64 -i cert.p12 | pbcopy`
+
+**2. Add this repository *variable* (Variables tab, not Secrets):**
+
+- `IOS_SIGNING_READY` = `true`
+
+That variable is the gate — the job self-skips while it's absent, so adding the
+secrets one at a time won't trigger half-configured runs. Flip it to `true` once
+all four secrets are in place.
+
+The bundle id (`com.spencersearle.monolito`), export method (`app-store-connect`),
+and export-compliance flag (`ITSAppUsesNonExemptEncryption = false`, already set
+in `Info.plist`) are all handled for you. The job imports the cert into a
+throwaway keychain, installs the profile, archives Release, exports the `.ipa`,
+and uploads it as the `ios-ipa` artifact.
+
+Exporting the cert/profile is smoothest once on a Mac (we have Xcode 26 here).
+Alternatively, **EAS Build** or **Codemagic** can manage iOS signing entirely in
+the cloud if you'd rather skip the Mac step.
+
+**Optional — push straight to TestFlight:** the workflow has a commented
+`Upload to TestFlight` step. Enable it (and skip the manual `.ipa` download) by
+adding an App Store Connect API key as three more secrets — `ASC_KEY_ID`,
+`ASC_ISSUER_ID`, `ASC_API_KEY_P8_BASE64` — then uncommenting that step.
 
 ### Android release signing
 
