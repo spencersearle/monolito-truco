@@ -30,6 +30,7 @@ const ASSETS = [
   'ai.js',
   'ai4.js',
   'net.js',
+  'sound.js',
   'ui.js',
 ];
 

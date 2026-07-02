@@ -62,12 +62,29 @@
     btnSoloLocal: $("btn-solo-local"), btnSoloCancel: $("btn-solo-cancel"),
     passgate: $("passgate"), passgateTitle: $("passgate-title"), passgateGo: $("passgate-go"),
     splashTag: $("splash-tag"), langToggle: $("lang-toggle"),
+    settingsToggle: $("settings-toggle"), settingsOverlay: $("settings-overlay"),
+    settingsTitle: $("settings-title"), btnCloseSettings: $("btn-close-settings"),
+    setSound: $("set-sound"), setSoundLabel: $("set-sound-label"),
+    setTheme: $("set-theme"), setThemeLabel: $("set-theme-label"),
+    setReset: $("set-reset"), setStatsLabel: $("set-stats-label"),
+    settingsPrivacy: $("settings-privacy"),
     btnFlorSolo: $("btn-flor-solo"), btnFlorOnline: $("btn-flor-online"),
   };
 
   /* ---------- i18n (English / Spanish) ---------- */
 
   let lang = localStorage.getItem("monolito-lang") === "es" ? "es" : "en";
+
+  /* ---------- theme (dark / light, persisted) ---------- */
+
+  let theme = localStorage.getItem("monolito-theme") === "light" ? "light" : "dark";
+
+  function applyTheme() {
+    document.body.classList.toggle("theme-light", theme === "light");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = theme === "light" ? "#f3e8cd" : "#040a1c";
+  }
+  applyTheme();
 
   const PT = (n) => (lang === "es" ? (n > 1 ? "puntos" : "punto") : (n > 1 ? "points" : "point"));
 
@@ -153,6 +170,52 @@
       inARow: (n) => ` · 🔥 ${n} in a row`,
       record: (w, l, st, b) => `${w}W — ${l}L${st} · best streak ${b}`,
       soloRecord: (w, l, st, b) => `Solo record: ${w}W — ${l}L${st} · best ${b}`,
+      // pass & play (seat-neutral wording)
+      rival: "your rival", rivalCap: "Your rival",
+      declinedScores: (p, n) => `Declined — ${p} scores ${n}`,
+      // online titles + notices
+      onlineTitle: "PLAY ONLINE", joinTableTitle: "JOIN A TABLE",
+      joiningTitle: "JOINING TABLE", tableReady: "YOUR TABLE IS READY",
+      connLost: "CONNECTION LOST", tableClosed: "TABLE CLOSED",
+      rivalLeftTitle: "RIVAL LEFT", rivalDisc: "RIVAL DISCONNECTED",
+      leaveTable: "LEAVE TABLE",
+      connLostTable: "The connection to the table was lost.",
+      connLostRival: "The connection to your rival was lost.",
+      desyncTable: "The game fell out of sync with the table.",
+      desyncRival: "The game fell out of sync with your rival.",
+      hostClosed: "The host closed the table.",
+      rivalLeftTxt: "Your rival left the table.",
+      rivalDiscTxt: "Waiting for your rival to rejoin — they can re-enter this code in JOIN GAME.",
+      tableNotFound: "Table not found — it may have closed. Double-check the code, or ask for a fresh one.",
+      netTimeout: "Couldn't reach the table — a network may be blocking the connection. Try again or switch networks.",
+      brokerFail: "Can't reach the matchmaking server — check your connection and try again.",
+      tableFull: "That table is full or already in play. Double-check the code, or ask for a new one.",
+      noNet: "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.",
+      joinPrompt: "Enter the table code your friend shared.",
+      codeTooShort: "Enter the table code (6 letters and numbers) the host is showing.",
+      invitedTxt: "You're invited — pick a name and sit down.",
+      crossing: "Crossing the gold sea…",
+      connectedSeat: "Connected — taking a seat…",
+      tableReadyTxt: "Give your rival this code to join — the cards fly the moment they're in.",
+      rejoinHint: (c) => `The link to the table dropped. Enter code ${c} in JOIN GAME to rejoin.`,
+      reconnected: "Reconnected — the hand plays on",
+      rivalBack: "Your rival is back — play on",
+      atTableMove: "You're at the table — your move",
+      atTablePlays: "You're at the table — the hand plays on",
+      shareText: "Join my Truco table — first to 30:",
+      // chat system lines
+      chatJoined: (n) => `${n} joined the table`,
+      chatLeft: (n) => `${n} left the table`,
+      chatTakesOver: (a, b) => `${a} takes over ${b}`,
+      chatLeftBot: (a, b) => `${a} left — ${b} takes over`,
+      chatRenamed: (a, b) => `${a} is now ${b}`,
+      chatYouAre: (n) => `You are now ${n}`,
+      // settings
+      settingsTitle: "SETTINGS", soundLabel: "SOUND", on: "ON", off: "OFF",
+      appearance: "APPEARANCE", dark: "DARK", light: "LIGHT",
+      soloRecordLabel: "SOLO RECORD", reset: "RESET", resetConfirm: "SURE?", resetDone: "CLEARED",
+      privacyNote: "Private by design — no accounts, no ads, no tracking, nothing stored on servers. " +
+        "Online play links devices directly (peer-to-peer); names and table talk exist only during the game.",
     },
     es: {
       splashTag: "Envido · Truco · Vale Cuatro — primero a 30",
@@ -227,6 +290,48 @@
       inARow: (n) => ` · 🔥 ${n} seguidas`,
       record: (w, l, st, b) => `${w}G — ${l}P${st} · mejor racha ${b}`,
       soloRecord: (w, l, st, b) => `Récord solo: ${w}G — ${l}P${st} · mejor ${b}`,
+      rival: "tu rival", rivalCap: "Tu rival",
+      declinedScores: (p, n) => `No quiero — ${p} suma ${n}`,
+      onlineTitle: "JUGAR ONLINE", joinTableTitle: "ENTRAR A UNA MESA",
+      joiningTitle: "ENTRANDO A LA MESA", tableReady: "TU MESA ESTÁ LISTA",
+      connLost: "SE CORTÓ LA CONEXIÓN", tableClosed: "MESA CERRADA",
+      rivalLeftTitle: "TU RIVAL SE FUE", rivalDisc: "RIVAL DESCONECTADO",
+      leaveTable: "DEJAR LA MESA",
+      connLostTable: "Se perdió la conexión con la mesa.",
+      connLostRival: "Se perdió la conexión con tu rival.",
+      desyncTable: "La partida se desincronizó de la mesa.",
+      desyncRival: "La partida se desincronizó de tu rival.",
+      hostClosed: "El anfitrión cerró la mesa.",
+      rivalLeftTxt: "Tu rival dejó la mesa.",
+      rivalDiscTxt: "Esperando que tu rival vuelva — puede reingresar este código en ENTRAR A UNA MESA.",
+      tableNotFound: "No se encontró la mesa — puede que haya cerrado. Revisá el código o pedí uno nuevo.",
+      netTimeout: "No se pudo llegar a la mesa — alguna red puede estar bloqueando la conexión. Probá de nuevo o cambiá de red.",
+      brokerFail: "No se pudo contactar el servidor de mesas — revisá tu conexión y probá de nuevo.",
+      tableFull: "Esa mesa está llena o ya en juego. Revisá el código o pedí uno nuevo.",
+      noNet: "No se pudo cargar el juego online (el script de PeerJS no responde). Revisá tu conexión y recargá la página.",
+      joinPrompt: "Escribí el código de mesa que te compartieron.",
+      codeTooShort: "Escribí el código de mesa (6 letras y números) que muestra el anfitrión.",
+      invitedTxt: "Estás invitado — elegí un nombre y sentate.",
+      crossing: "Cruzando el mar dorado…",
+      connectedSeat: "Conectado — tomando asiento…",
+      tableReadyTxt: "Pasale este código a tu rival — las cartas vuelan apenas entra.",
+      rejoinHint: (c) => `Se cortó el enlace con la mesa. Ingresá el código ${c} en ENTRAR A UNA MESA para volver.`,
+      reconnected: "Reconectado — la mano sigue",
+      rivalBack: "Tu rival volvió — se sigue jugando",
+      atTableMove: "Estás en la mesa — tu jugada",
+      atTablePlays: "Estás en la mesa — la mano sigue",
+      shareText: "Sumate a mi mesa de Truco — primero a 30:",
+      chatJoined: (n) => `${n} se sentó a la mesa`,
+      chatLeft: (n) => `${n} dejó la mesa`,
+      chatTakesOver: (a, b) => `${a} reemplaza a ${b}`,
+      chatLeftBot: (a, b) => `${a} se fue — lo reemplaza ${b}`,
+      chatRenamed: (a, b) => `${a} ahora es ${b}`,
+      chatYouAre: (n) => `Ahora sos ${n}`,
+      settingsTitle: "AJUSTES", soundLabel: "SONIDO", on: "SÍ", off: "NO",
+      appearance: "APARIENCIA", dark: "OSCURO", light: "CLARO",
+      soloRecordLabel: "RÉCORD SOLO", reset: "BORRAR", resetConfirm: "¿SEGURO?", resetDone: "BORRADO",
+      privacyNote: "Privado por diseño — sin cuentas, sin publicidad, sin rastreo, nada guardado en servidores. " +
+        "El juego online conecta los dispositivos directamente (peer-to-peer); los nombres y la charla existen solo durante la partida.",
     },
   };
 
@@ -308,9 +413,12 @@
     "La Mona", "El Tano", "Diego", "Lucho", "El Colo"];
 
   const OPP_NAME = () =>
-    net ? (rivalName || "your rival") : local2 ? "Player 2" : botName;
+    net ? (rivalName || t("rival")) : local2 ? t("player2") : botName;
   const OPP_CAP = () =>
-    net ? (rivalName || "Your rival") : local2 ? "Player 2" : botName;
+    net ? (rivalName || t("rivalCap")) : local2 ? t("player2") : botName;
+
+  /* pass-and-play: seat-neutral label ("Player 1"/"Player 2", translated) */
+  const seatLabel1 = (seat) => (seat === "you" ? t("player1") : t("player2"));
 
   /* ---------- match stats (solo vs El Monolito, persisted) ---------- */
 
@@ -328,7 +436,8 @@
       localStorage.setItem(KEY, JSON.stringify(s));
       return s;
     }
-    return { get, record };
+    function reset() { localStorage.removeItem(KEY); }
+    return { get, record, reset };
   })();
 
   /* ---------- El Monolito's voice (solo only — taunts in his bubble) ---------- */
@@ -426,7 +535,7 @@
     if (room && room.role === "guest") {         // 2v2 guest watches the host
       Net.send({ t: "hb" });
       if (now - rivalSeen > HB_TIMEOUT)
-        netEnded4("CONNECTION LOST", "The connection to the table was lost.");
+        netEnded4(t("connLost"), t("connLostTable"));
     }
   }
 
@@ -464,6 +573,7 @@
   function bubble(player, text, hold) { bubbleAt(player === "you" ? "you" : "top", text, hold); }
 
   function flash(text) {
+    Sound.play("call");
     el.callflash.textContent = text;
     el.callflash.classList.remove("hidden");
     el.callflash.style.animation = "none";
@@ -578,8 +688,10 @@
           clearBattle();
           renderPips();
           renderStake();
+          Sound.play("deal");
           renderHands(true);
-          msg(ev.mano === "you" ? t("newHandYouMano") : t("newHandOppMano", OPP_NAME()));
+          msg(local2 ? t("newHandOppMano", seatLabel1(ev.mano))
+            : ev.mano === "you" ? t("newHandYouMano") : t("newHandOppMano", OPP_NAME()));
         }, 700);
         break;
 
@@ -587,6 +699,7 @@
         enqueue(() => {
           const row = ev.player === "you" ? el.playedYou : el.playedAi;
           const c = makeCardEl(ev.card, false);
+          Sound.play("card");
           c.classList.add("thrown");
           row.appendChild(c);
           renderHands(false);
@@ -607,8 +720,10 @@
           const aCard = el.playedAi.lastElementChild;
           if (tr.winner === "you") { yCard?.classList.add("trick-win"); aCard?.classList.add("trick-lose"); }
           else if (tr.winner === "ai") { aCard?.classList.add("trick-win"); yCard?.classList.add("trick-lose"); }
+          if (tr.winner !== "tie") Sound.play("trick");
           renderPips();
           msg(tr.winner === "tie" ? t("parda") :
+              local2 ? t("oppTakesTrick", seatLabel1(tr.winner)) :
               tr.winner === "you" ? t("youTakeTrick") : t("oppTakesTrick", OPP_CAP()));
         }, 1300);
         enqueue(() => clearBattle(), 150);
@@ -621,7 +736,8 @@
           const text = CALL_TEXT[ev.name] || ev.name;
           bubble(ev.player, text);
           if (big) flash(text);
-          msg(ev.player === "you" ? t("waitingFor", OPP_NAME())
+          msg(local2 ? t("seatCalls", seatLabel1(ev.player))
+            : ev.player === "you" ? t("waitingFor", OPP_NAME())
             : isFlorCall ? t("oppFlor", OPP_CAP()) : t("oppCalls", OPP_CAP()));
         }, big ? 1400 : 900);
         if (ev.player === "ai") {
@@ -649,7 +765,8 @@
           else bubble(pie, "SON BUENAS");
         }, 1300);
         enqueue(() => {
-          msg(ev.winner === "you"
+          msg(local2 ? t("oppWinsEnvido", seatLabel1(ev.winner), ev.points)
+            : ev.winner === "you"
             ? t("youWinEnvido", ev.points)
             : t("oppWinsEnvido", OPP_CAP(), ev.points));
         }, 1100);
@@ -658,7 +775,8 @@
 
       case "envido-declined":
         enqueue(() => {
-          msg(ev.caller === "you"
+          msg(local2 ? t("declinedScores", seatLabel1(ev.caller), ev.points)
+            : ev.caller === "you"
             ? t("declinedYouScore", ev.points)
             : t("youDeclinedOppScores", OPP_NAME(), ev.points));
         }, 1000);
@@ -675,14 +793,16 @@
           enqueue(() => bubble(pie, `FLOR ${ev.values[pie]}`), 1300);
         }
         enqueue(() => {
-          msg(ev.winner === "you" ? t("youWinFlor", ev.points) : t("oppWinsFlor", OPP_CAP(), ev.points));
+          msg(local2 ? t("oppWinsFlor", seatLabel1(ev.winner), ev.points)
+            : ev.winner === "you" ? t("youWinFlor", ev.points) : t("oppWinsFlor", OPP_CAP(), ev.points));
         }, 1100);
         break;
       }
 
       case "flor-declined":
         enqueue(() => {
-          msg(ev.caller === "you"
+          msg(local2 ? t("declinedScores", seatLabel1(ev.caller), ev.points)
+            : ev.caller === "you"
             ? t("florDeclinedYou", ev.points)
             : t("florDeclinedOpp", OPP_NAME(), ev.points));
         }, 1000);
@@ -704,7 +824,8 @@
       case "hand-end":
         enqueue(() => {
           const why = ev.reason === "mazo" ? t("whyFold") : ev.reason === "no-quiero" ? t("whyNoQuiero") : "";
-          msg(ev.winner === "you"
+          msg(local2 ? t("oppWinsHand", seatLabel1(ev.winner), ev.points, why)
+            : ev.winner === "you"
             ? t("youWinHand", ev.points, why)
             : t("oppWinsHand", OPP_CAP(), ev.points, why));
         }, 1900);
@@ -839,6 +960,7 @@
     const div = document.createElement("div");
     div.className = "endgame";
     const won = winner === "you";
+    Sound.play(local2 || won ? "win" : "lose");
     const title = won
       ? (local2 ? t("p1Wins") : t("youWin"))
       : net ? t("oppWins", esc((rivalName || "YOUR RIVAL").toUpperCase()))
@@ -953,6 +1075,7 @@
           clearBattle();
           renderPips4();
           renderStake4();
+          Sound.play("deal");
           renderHands4(true);
           renderPlates4();
           msg(ev.mano === room.mySeat ? t("newHandYouMano4") : t("newHandMano4", seatName(ev.mano)));
@@ -963,6 +1086,7 @@
         enqueue(() => {
           const slot = PLAYED_ELS[seatPos(ev.seat)]();
           const c = makeCardEl(ev.card, false);
+          Sound.play("card");
           c.classList.add("thrown");
           slot.appendChild(c);
           renderHands4(false);
@@ -985,6 +1109,7 @@
             if (ev.winnerSeat === null) continue;            // parda: no highlight
             card.classList.add(seat === ev.winnerSeat ? "trick-win" : "trick-lose");
           }
+          if (ev.winner !== "tie") Sound.play("trick");
           renderPips4();
           msg(ev.winner === "tie" ? t("parda") :
               ev.winnerSeat === room.mySeat ? t("youTakeTrick4") :
@@ -1146,7 +1271,7 @@
     clearEcho();
     const ok = a.kind === "play" ? game4.playCard(seat, a.index) : game4.call(seat, a.name);
     if (!ok) {
-      netEnded4("CONNECTION LOST", "The game fell out of sync with the table.");
+      netEnded4(t("connLost"), t("desyncTable"));
       return;
     }
     sync4();
@@ -1208,6 +1333,7 @@
   function showEndgame4(winnerTeam) {
     const div = document.createElement("div");
     div.className = "endgame";
+    Sound.play(winnerTeam === myTeam() ? "win" : "lose");
     const mates = [winnerTeam, winnerTeam + 2]
       .map((s) => (s === room.mySeat ? t("you") : esc(room.seats[s].name.toUpperCase())));
     const title = winnerTeam === myTeam() ? t("yourTeamWins") : t("teamWins", mates.join(" & "));
@@ -1285,7 +1411,7 @@
             seats: publicSeats(), yourSeat: botSeat,
           });
           Net.broadcast({ t: "seathuman", seat: botSeat, name: room.seats[botSeat].name }, id);
-          chatSys(`${room.seats[botSeat].name} takes over ${botName}`);
+          chatSys(t("chatTakesOver", room.seats[botSeat].name, botName));
           renderPlates4();
           if (!busy) onIdle();
           return;
@@ -1300,7 +1426,7 @@
         swapPick = null;
         broadcastRoster();
         renderLobbyHost();
-        chatSys(`${room.seats[free].name} joined the table`);
+        chatSys(t("chatJoined", room.seats[free].name));
         break;
       }
       case "i":
@@ -1343,13 +1469,13 @@
       room.seats[seat] = { kind: "open", name: "", connId: null };
       broadcastRoster();
       renderLobbyHost();
-      chatSys(`${name} left the table`);
+      chatSys(t("chatLeft", name));
       return;
     }
     // mid-game: a bot takes over the seat so the table plays on
     room.seats[seat] = { kind: "bot", name: pickBotName(), connId: null };
     Net.broadcast({ t: "seatbot", seat, name: room.seats[seat].name });
-    chatSys(`${name} left — ${room.seats[seat].name} takes over`);
+    chatSys(t("chatLeftBot", name, room.seats[seat].name));
     renderPlates4();
     if (!busy) onIdle();
   }
@@ -1425,8 +1551,8 @@
     renderHands4(false);
     renderChips4();
     msg(game4.toAct === room.mySeat && !game4.pending
-      ? "You're at the table — your move"
-      : "You're at the table — the hand plays on");
+      ? t("atTableMove")
+      : t("atTablePlays"));
     if (!busy) onIdle();
   }
 
@@ -1466,7 +1592,7 @@
         if (room.seats) {
           const old = room.seats[m.seat].name;
           room.seats[m.seat] = { kind: "bot", name: cleanName(m.name), connId: null };
-          chatSys(`${old} left — ${room.seats[m.seat].name} takes over`);
+          chatSys(t("chatLeftBot", old, room.seats[m.seat].name));
           if (game4) renderPlates4();
           else renderLobbyGuest();
         }
@@ -1475,7 +1601,7 @@
         if (room.seats) {
           const bot = room.seats[m.seat].name;
           room.seats[m.seat] = { kind: "human", name: cleanName(m.name), connId: null };
-          chatSys(`${room.seats[m.seat].name} takes over ${bot}`);
+          chatSys(t("chatTakesOver", room.seats[m.seat].name, bot));
           if (game4) renderPlates4();
         }
         break;
@@ -1484,8 +1610,8 @@
           const old = room.seats[m.seat].name;
           room.seats[m.seat].name = cleanName(m.name);
           chatSys(m.seat === room.mySeat
-            ? `You are now ${room.seats[m.seat].name}`
-            : `${old} is now ${room.seats[m.seat].name}`);
+            ? t("chatYouAre", room.seats[m.seat].name)
+            : t("chatRenamed", old, room.seats[m.seat].name));
           if (game4) renderPlates4();
         }
         break;
@@ -1494,10 +1620,10 @@
         break;
       case "full":
         room = null;
-        lobbyFailed("That table is full or the game already started. Ask for a fresh link.");
+        lobbyFailed(t("tableFull"));
         break;
       case "bye":
-        netEnded4("TABLE CLOSED", "The host closed the table.");
+        netEnded4(t("tableClosed"), t("hostClosed"));
         break;
     }
   }
@@ -1528,20 +1654,20 @@
   }
 
   function netError4(e) {
-    const t = e && e.type;
-    if (t === "peer-unavailable") {
+    const kind = e && e.type;
+    if (kind === "peer-unavailable") {
       room = null;
-      lobbyFailed("Table not found — it may have closed. Ask for a fresh link.");
-    } else if (t === "timeout") {
+      lobbyFailed(t("tableNotFound"));
+    } else if (kind === "timeout") {
       room = null;
-      lobbyFailed("Couldn't reach the table — a network may be blocking the connection. Try again or switch networks.");
+      lobbyFailed(t("netTimeout"));
     } else if (room && (game4 || room.started)) {
-      netEnded4("CONNECTION LOST", "The connection to the table was lost.");
+      netEnded4(t("connLost"), t("connLostTable"));
     } else if (room && room.role === "host" && Net.roomSize() > 0) {
       /* broker hiccup after guests connected — ignore, WebRTC links live on */
     } else {
       room = null;
-      lobbyFailed("Can't reach the matchmaking server — check your connection and try again.");
+      lobbyFailed(t("brokerFail"));
     }
   }
 
@@ -1687,6 +1813,7 @@
       unreadChat++;
       renderChatBadges();
       chatToast(who, text, sys);
+      if (!sys) Sound.play("chat");
     }
   }
 
@@ -1782,7 +1909,7 @@
       broadcastRoster();
       renderLobbyHost();
     }
-    chatSys(`${old} is now ${name}`);
+    chatSys(t("chatRenamed", old, name));
   }
 
   /* ---------- stage transitions ---------- */
@@ -1792,6 +1919,7 @@
     el.splash.classList.add("gone");
     el.stage.classList.remove("hidden");
     el.langToggle.classList.add("hidden");      // language switch lives on the main screen
+    el.settingsToggle.classList.add("hidden");  // settings too
     if (!game4) {
       el.labelYou.textContent = local2 ? t("player1") : t("you");
       el.labelOpp.textContent = net ? (rivalName || "RIVAL").toUpperCase()
@@ -1872,6 +2000,7 @@
     resetChat();
     renderSplashStats();
     el.langToggle.classList.remove("hidden");
+    el.settingsToggle.classList.remove("hidden");
     el.splash.classList.remove("gone");
   }
 
@@ -1922,7 +2051,7 @@
     aiThinking = false;
     enterStage();
     startHeartbeat();
-    repaintStage1("Reconnected — the hand plays on");
+    repaintStage1(t("reconnected"));
     if (!busy && !game.gameOver) onIdle();
   }
 
@@ -1949,7 +2078,7 @@
       ? game.playCard("ai", a.index)
       : game.call("ai", a.name);
     if (!ok) {
-      netEnded("CONNECTION LOST", "The game fell out of sync with your rival.");
+      netEnded(t("connLost"), t("desyncRival"));
       return;
     }
     sync();
@@ -1962,7 +2091,7 @@
     switch (m.t) {
       case "hello": {
         const name = cleanName(m.name);
-        if (net && rivalName && name !== rivalName) chatSys(`${rivalName} is now ${name}`);
+        if (net && rivalName && name !== rivalName) chatSys(t("chatRenamed", rivalName, name));
         rivalName = name;
         if (net) el.labelOpp.textContent = rivalName.toUpperCase();
         break;
@@ -1997,7 +2126,7 @@
         // guest left → host keeps the table so they can rejoin with the code;
         // host left → the table is gone (host owns the peer)
         if (net && net.role === "host") hostRival1Dropped();
-        else netEnded("TABLE CLOSED", "The host closed the table.");
+        else netEnded(t("tableClosed"), t("hostClosed"));
         break;
     }
   }
@@ -2075,34 +2204,34 @@
 
   function lobbyFailed(text) {
     Net.destroy();
-    showOverlay("PLAY ONLINE", text, { cancelLabel: "BACK" });
+    showOverlay(t("onlineTitle"), text, { cancelLabel: t("back") });
   }
 
   function netError(e) {
-    const t = e && e.type;
-    if (t === "peer-unavailable") {
+    const kind = e && e.type;
+    if (kind === "peer-unavailable") {
       // host is gone (guest can't reach the table) — couldn't (re)join
       if (net || game) { net = null; game = null; }
-      lobbyFailed("Table not found — it may have closed. Double-check the code, or ask for a fresh one.");
-    } else if (t === "timeout") {
-      lobbyFailed("Couldn't reach the table — one of your networks may be blocking the connection. Try again or switch networks.");
+      lobbyFailed(t("tableNotFound"));
+    } else if (kind === "timeout") {
+      lobbyFailed(t("netTimeout"));
     } else if (net && net.role === "host" && game) {
       // broker/link hiccup on the host: the WebRTC data link survives, and a real
       // rival drop is caught by the connection's close event — so ignore this
     } else if (net) {
-      netEnded("CONNECTION LOST", "The connection to your rival was lost.");
+      netEnded(t("connLost"), t("connLostRival"));
     } else {
-      lobbyFailed("Can't reach the matchmaking server — check your connection and try again.");
+      lobbyFailed(t("brokerFail"));
     }
   }
 
   /* the online menu: name + mode choice */
   function openOnlineMenu() {
     if (!Net.available()) {
-      showNotice("PLAY ONLINE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+      showNotice(t("onlineTitle"), t("noNet"));
       return;
     }
-    showOverlay("PLAY ONLINE", t("pickTable"));
+    showOverlay(t("onlineTitle"), t("pickTable"));
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
     el.onlineNamebox.classList.remove("hidden");
     el.onlineModes.classList.remove("hidden");
@@ -2118,10 +2247,10 @@
      automatically from the first message the host sends. */
   function openJoinPrompt() {
     if (!Net.available()) {
-      showNotice("JOIN A TABLE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+      showNotice(t("joinTableTitle"), t("noNet"));
       return;
     }
-    showOverlay("JOIN A TABLE", "Enter the table code your friend shared.");
+    showOverlay(t("joinTableTitle"), t("joinPrompt"));
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
     el.joinCode.value = "";
     el.onlineNamebox.classList.remove("hidden");
@@ -2140,7 +2269,7 @@
   function joinFromCode() {
     const code = parseCode(el.joinCode.value);
     if (code.length < 4) {
-      el.onlineStatus.textContent = "Enter the table code (6 letters and numbers) the host is showing.";
+      el.onlineStatus.textContent = t("codeTooShort");
       return;
     }
     saveName();
@@ -2153,16 +2282,16 @@
 
   function joinByCode(code) {
     if (!Net.available()) {
-      showNotice("JOIN A TABLE", "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.");
+      showNotice(t("joinTableTitle"), t("noNet"));
       return;
     }
     joinCode = code;
     net = null; room = null; game = null; game4 = null;
-    showOverlay("JOINING TABLE", "Crossing the gold sea…");
+    showOverlay(t("joiningTitle"), t("crossing"));
     Net.join(code, {
       onConnect: () => {
         Net.send({ t: "hello", name: myName() });
-        showOverlay("JOINING TABLE", "Connected — taking a seat…");
+        showOverlay(t("joiningTitle"), t("connectedSeat"));
       },
       onMessage: guestRoute,
       onClose: () => guestConnLost(),
@@ -2175,7 +2304,7 @@
     if (!m || typeof m !== "object") return;
     if (m.t === "full") {
       room = null; net = null;
-      lobbyFailed("That table is full or already in play. Double-check the code, or ask for a new one.");
+      lobbyFailed(t("tableFull"));
       return;
     }
     // lock in 2v2 the first time a 2v2-only message arrives
@@ -2196,19 +2325,19 @@
     clearEcho();
     Net.destroy();
     exitToSplash();
-    showNotice("CONNECTION LOST", code
-      ? `The link to the table dropped. Enter code ${code.toUpperCase()} in JOIN GAME to rejoin.`
-      : "The connection to the table was lost.");
+    showNotice(t("connLost"), code
+      ? t("rejoinHint", code.toUpperCase())
+      : t("connLostTable"));
   }
 
   function openTable() {
     saveName();
-    showOverlay("PLAY ONLINE", "Summoning a table…");
+    showOverlay(t("onlineTitle"), t("summoning"));
     Net.host({
       onReady: (code) => {
         myTableCode = code;
         const url = location.origin + location.pathname + "#join=" + code;
-        showOverlay("YOUR TABLE IS READY", "Give your rival this code to join — the cards fly the moment they're in.",
+        showOverlay(t("tableReady"), t("tableReadyTxt"),
           { code, link: url });
       },
       onConnect: () => {
@@ -2231,13 +2360,12 @@
   function hostRival1Dropped() {
     if (!net || net.role !== "host" || rivalGone) return;
     if (!game || game.gameOver) {
-      netEnded("RIVAL LEFT", "Your rival left the table.");
+      netEnded(t("rivalLeftTitle"), t("rivalLeftTxt"));
       return;
     }
     rivalGone = true;
-    showOverlay("RIVAL DISCONNECTED",
-      "Waiting for your rival to rejoin — they can re-enter this code in JOIN GAME.",
-      { code: myTableCode, cancelLabel: "LEAVE TABLE" });
+    showOverlay(t("rivalDisc"), t("rivalDiscTxt"),
+      { code: myTableCode, cancelLabel: t("leaveTable") });
   }
 
   /* 1v1 host: rival is back — drop the pause overlay and repaint the board */
@@ -2248,14 +2376,14 @@
     if (location.hash.startsWith("#join")) {
       history.replaceState(null, "", location.pathname + location.search);
     }
-    repaintStage1("Your rival is back — play on");
+    repaintStage1(t("rivalBack"));
     if (!busy) onIdle();
   }
 
   /* a shared #join / #join4 link: prefill the code, ask for a name, then join.
      (The link still works; the code is the primary way in.) */
   function openJoinLink(code) {
-    showOverlay("JOIN TABLE", "You're invited — pick a name and sit down.");
+    showOverlay(t("joinTableTitle"), t("invitedTxt"));
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
     el.joinCode.value = code.toUpperCase();
     el.onlineNamebox.classList.remove("hidden");
@@ -2361,6 +2489,14 @@
     el.chatInput.placeholder = t("sayThis");
     el.onlineName.placeholder = t("playerPH");
     el.nameInput.placeholder = t("playerPH");
+    // settings
+    el.settingsTitle.textContent = t("settingsTitle");
+    el.setSoundLabel.textContent = t("soundLabel");
+    el.setThemeLabel.textContent = t("appearance");
+    el.setStatsLabel.textContent = t("soloRecordLabel");
+    el.settingsPrivacy.textContent = t("privacyNote");
+    el.btnCloseSettings.textContent = t("back");
+    renderSettings();
     renderFlorToggles();
   }
 
@@ -2387,6 +2523,45 @@
     localStorage.setItem("monolito-lang", lang);
     applyLang();
     renderSplashStats();
+  });
+
+  /* ---------- settings ---------- */
+
+  /* the static labels are set by applyLang(); this paints the live values */
+  function renderSettings() {
+    el.setSound.textContent = Sound.muted() ? t("off") : t("on");
+    el.setTheme.textContent = theme === "light" ? t("light") : t("dark");
+    el.setReset.textContent = t("reset");
+    el.setReset.disabled = false;
+  }
+
+  el.settingsToggle.addEventListener("click", () => {
+    renderSettings();
+    el.settingsOverlay.classList.remove("hidden");
+  });
+  el.btnCloseSettings.addEventListener("click", () => el.settingsOverlay.classList.add("hidden"));
+  el.setSound.addEventListener("click", () => {
+    Sound.toggle();
+    if (!Sound.muted()) Sound.play("trick");   // a quick audible confirmation
+    renderSettings();
+  });
+  el.setTheme.addEventListener("click", () => {
+    theme = theme === "light" ? "dark" : "light";
+    localStorage.setItem("monolito-theme", theme);
+    applyTheme();
+    renderSettings();
+  });
+  /* two-tap reset: RESET → SURE? → CLEARED */
+  el.setReset.addEventListener("click", () => {
+    if (el.setReset.textContent !== t("resetConfirm")) {
+      if (el.setReset.textContent === t("resetDone")) return;
+      el.setReset.textContent = t("resetConfirm");
+      return;
+    }
+    Stats.reset();
+    renderSplashStats();
+    el.setReset.textContent = t("resetDone");
+    el.setReset.disabled = true;
   });
 
   const toggleFlor = () => {
@@ -2456,7 +2631,7 @@
   el.btnShareLink.addEventListener("click", () => {
     navigator.share({
       title: "MONOLITO · Truco Argentino",
-      text: "Join my Truco table — first to 30:",
+      text: t("shareText"),
       url: el.onlineLink.value,
     }).catch(() => {});
   });

@@ -10,6 +10,10 @@
       <stop offset="0.5" stop-color="#f2c94c"/>
       <stop offset="1" stop-color="#c9982a"/>
     </linearGradient>
+    <linearGradient id="goldEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6d579"/>
+      <stop offset="1" stop-color="#d4a02a"/>
+    </linearGradient>
     <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#d4a02a" stop-opacity="0"/>
       <stop offset="0.5" stop-color="#f2c94c" stop-opacity="0.8"/>
@@ -21,7 +25,7 @@
     </radialGradient>
   </defs>
 
-  <!-- background -->
+  <!-- background: full bleed, opaque -->
   <rect width="512" height="512" fill="url(#bg)"/>
 
   <!-- soft central glow -->
@@ -32,10 +36,28 @@
   <circle cx="256" cy="232" r="104" fill="#0a1a3a"/>
   <circle cx="256" cy="232" r="104" fill="none" stroke="url(#gold)" stroke-width="6" stroke-opacity="0.6"/>
 
-  <!-- the monolith: a tall standing slab -->
-  <rect x="226" y="150" width="60" height="164" rx="8" fill="url(#gold)"/>
-  <rect x="226" y="150" width="60" height="164" rx="8" fill="none" stroke="#0a1a3a" stroke-width="3" stroke-opacity="0.35"/>
-  <rect x="240" y="168" width="32" height="6" rx="3" fill="#0a1a3a" fill-opacity="0.4"/>
+  <!-- the monolith as a thrown card: tilted slab with bevel and an engraved espada pip -->
+  <g transform="rotate(-8 256 232)">
+    <!-- card shadow -->
+    <rect x="228" y="152" width="64" height="172" rx="10" fill="#040a1c" fill-opacity="0.55" transform="translate(6 8)"/>
+    <!-- card body -->
+    <rect x="228" y="152" width="64" height="172" rx="10" fill="url(#gold)"/>
+    <!-- bevel: light catch on top-left edge, dark seat on bottom-right -->
+    <rect x="231" y="155" width="58" height="166" rx="8" fill="none" stroke="#f6d579" stroke-width="2.5" stroke-opacity="0.85"/>
+    <rect x="228" y="152" width="64" height="172" rx="10" fill="none" stroke="#c9982a" stroke-width="2"/>
+    <!-- inner card frame line -->
+    <rect x="238" y="162" width="44" height="152" rx="6" fill="none" stroke="#0a1a3a" stroke-width="2" stroke-opacity="0.35"/>
+
+    <!-- engraved espada (sword) pip, point up: blade, guard, grip, pommel -->
+    <g fill="#0a1a3a" fill-opacity="0.85">
+      <path d="M260,178 L266,192 L265,258 L255,258 L254,192 Z"/>
+      <rect x="242" y="258" width="36" height="8" rx="4"/>
+      <rect x="256" y="266" width="8" height="18" rx="3"/>
+      <circle cx="260" cy="291" r="6.5"/>
+    </g>
+    <!-- blade edge glint -->
+    <path d="M258,182 L258,256" stroke="#f6d579" stroke-width="1.5" stroke-opacity="0.5"/>
+  </g>
 
   <!-- flowing gold table wave near the bottom -->
   <path fill="url(#wave)" d="M40,420 C140,388 200,452 300,420 C380,394 420,452 472,424 L472,452 C420,480 380,420 300,448 C200,480 140,416 40,448 Z"/>

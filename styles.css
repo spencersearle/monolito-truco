@@ -291,6 +291,53 @@ body {
 }
 .lang-toggle:hover { border-color: var(--gold-bright); box-shadow: 0 0 16px rgba(242, 201, 76, .3); }
 
+.settings-toggle {
+  left: auto;
+  right: calc(14px + env(safe-area-inset-right));
+  font-size: 1rem;
+}
+
+/* ---------- settings ---------- */
+
+.settings-panel { max-width: 460px; }
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.settings-label {
+  font-weight: 700;
+  letter-spacing: .22em;
+  font-size: .78rem;
+  color: var(--ice);
+}
+
+.settings-panel .settings-btn {
+  align-self: auto;
+  margin: 0;
+  padding: 9px 22px;
+  font-size: .8rem;
+  min-width: 118px;
+}
+
+.settings-note {
+  font-size: .8rem;
+  line-height: 1.55;
+  color: rgba(245, 234, 209, .6);
+  border-top: 1px solid rgba(212, 160, 42, .25);
+  padding-top: 14px;
+}
+
+.settings-version {
+  text-align: center;
+  font-size: .7rem;
+  letter-spacing: .18em;
+  color: rgba(156, 196, 255, .5);
+}
+
 .flor-toggle {
   align-self: center;
   letter-spacing: .14em;
@@ -1626,3 +1673,72 @@ body {
   .splash-coin { animation: none; }
   .splash-title, .endgame-title { animation: none; }
 }
+
+/* ============================================================
+   Light theme — a daylight room around the same navy holotable.
+   The table, cards, bubbles and chat keep their midnight look;
+   the chrome (backgrounds, panels, HUD, text) goes ivory/navy.
+   ============================================================ */
+
+body.theme-light {
+  color: #14224a;
+  background: radial-gradient(120% 90% at 50% -10%, #fdf6e3 0%, #f3e8cd 55%, #e7d9b8 100%);
+}
+body.theme-light .wave { opacity: .22; }
+body.theme-light .splash {
+  background:
+    radial-gradient(80% 70% at 50% 35%, rgba(255, 250, 235, .6) 0%, rgba(240, 229, 202, .92) 75%);
+}
+body.theme-light .splash-title {
+  background: linear-gradient(115deg, #14224a 20%, #a87b12 45%, #8a6410 60%, #14224a 80%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+body.theme-light .splash-sub { color: #1d5cd6; }
+body.theme-light .splash-tag { color: rgba(20, 34, 74, .6); }
+body.theme-light .splash-stats { color: rgba(29, 92, 214, .85); }
+body.theme-light .btn-ghost {
+  color: #1d5cd6;
+  border-color: rgba(29, 92, 214, .45);
+  background: rgba(255, 255, 255, .5);
+}
+body.theme-light .btn-ghost:hover { border-color: #1d5cd6; box-shadow: 0 0 24px rgba(29, 92, 214, .2); }
+body.theme-light .overlay { background: rgba(240, 229, 202, .8); }
+body.theme-light .overlay-panel {
+  border-color: rgba(168, 123, 18, .55);
+  background: linear-gradient(170deg, rgba(253, 247, 232, .96), rgba(240, 228, 198, .98));
+  box-shadow: 0 30px 80px rgba(90, 70, 20, .28), inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+body.theme-light .overlay-panel h2 { color: #8a6410; }
+body.theme-light .online-status,
+body.theme-light .solo-hint,
+body.theme-light .online-codehint,
+body.theme-light .rules-scroll { color: rgba(20, 34, 74, .85); }
+body.theme-light .rules-scroll strong { color: #8a6410; }
+body.theme-light .rules-scroll h3 { color: #a87b12; }
+body.theme-light .rules-scroll em { color: #1d5cd6; }
+body.theme-light .online-namelabel,
+body.theme-light .settings-label,
+body.theme-light .online-codelabel { color: #1d5cd6; }
+body.theme-light .online-name,
+body.theme-light .online-link { background: rgba(255, 255, 255, .75); color: #14224a; border-color: rgba(29, 92, 214, .4); }
+body.theme-light .online-code { background: rgba(255, 255, 255, .75); color: #8a6410; }
+body.theme-light .settings-note { color: rgba(20, 34, 74, .7); }
+body.theme-light .settings-version { color: rgba(29, 92, 214, .6); }
+body.theme-light .lang-toggle { background: rgba(255, 255, 255, .6); color: #8a6410; }
+body.theme-light .lobby-name { color: #14224a; }
+body.theme-light .lobby-seat { background: rgba(255, 255, 255, .5); }
+body.theme-light .hud-label { color: #1d5cd6; }
+body.theme-light .hud-points { color: #a87b12; text-shadow: none; }
+body.theme-light .hud-title { color: rgba(20, 34, 74, .85); }
+body.theme-light .hud-stake { color: #8a6410; }
+body.theme-light .hud-track { background: rgba(29, 92, 214, .18); }
+body.theme-light .dock-msg { color: rgba(20, 34, 74, .78); }
+body.theme-light .passgate {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(242, 201, 76, .3), transparent 60%),
+    #f3e8cd;
+}
+body.theme-light .passgate-title { color: #8a6410; text-shadow: none; }
+body.theme-light .passgate-sub { color: rgba(20, 34, 74, .7); }

@@ -61,6 +61,8 @@
 
   <!-- Language toggle (main screen, bottom-left) -->
   <button class="lang-toggle" id="lang-toggle" title="English / Español">ES</button>
+  <!-- Settings (main screen, bottom-right) -->
+  <button class="lang-toggle settings-toggle" id="settings-toggle" title="Settings">⚙</button>
 
   <!-- Title splash -->
   <div class="splash" id="splash">
@@ -96,6 +98,28 @@
       <div class="passgate-title" id="passgate-title">PLAYER 2</div>
       <p class="passgate-sub">Pass the device over — your cards are hidden until you tap.</p>
       <button class="btn btn-gold" id="passgate-go">I'M READY</button>
+    </div>
+  </div>
+
+  <!-- Settings overlay -->
+  <div class="overlay hidden" id="settings-overlay">
+    <div class="overlay-panel settings-panel">
+      <h2 id="settings-title">SETTINGS</h2>
+      <div class="settings-row">
+        <span class="settings-label" id="set-sound-label">SOUND</span>
+        <button class="btn btn-ghost settings-btn" id="set-sound">ON</button>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label" id="set-theme-label">APPEARANCE</span>
+        <button class="btn btn-ghost settings-btn" id="set-theme">DARK</button>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label" id="set-stats-label">SOLO RECORD</span>
+        <button class="btn btn-ghost settings-btn" id="set-reset">RESET</button>
+      </div>
+      <p class="settings-note" id="settings-privacy"></p>
+      <p class="settings-version">MONOLITO · v1.0.0</p>
+      <button class="btn btn-gold" id="btn-close-settings">BACK</button>
     </div>
   </div>
 
@@ -272,6 +296,7 @@
   <script src="ai.js"></script>
   <script src="ai4.js"></script>
   <script src="net.js"></script>
+  <script src="sound.js"></script>
   <script src="ui.js"></script>
 
   <!-- Register the service worker (installable PWA + offline play) -->
