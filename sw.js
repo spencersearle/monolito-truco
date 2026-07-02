@@ -2,7 +2,7 @@
    Makes the game installable and fully playable offline (vs the AI).
    Bump CACHE_VERSION whenever any cached asset changes so clients refresh. */
 
-const CACHE_VERSION = 'monolito-v3';
+const CACHE_VERSION = 'monolito-v4';
 const CACHE_NAME = `${CACHE_VERSION}`;
 
 // App shell: everything needed to boot and play solo vs the AI, offline.
@@ -79,18 +79,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin static assets: cache-first, fall back to network and cache it.
+  // Same-origin static assets: network-first so scripts/styles always match the
+  // freshly fetched HTML after a deploy (a cache-first strategy here served the
+  // previous version's JS/CSS against the new page). Offline falls back to cache.
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(request).then((cached) =>
-        cached || fetch(request).then((res) => {
-          if (res && res.status === 200 && res.type === 'basic') {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(request, copy));
-          }
-          return res;
-        })
-      )
+      fetch(request).then((res) => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(request, copy));
+        }
+        return res;
+      }).catch(() => caches.match(request, { ignoreSearch: true }))
     );
   }
   // Everything else (e.g. PeerJS signaling): let the network handle it.
