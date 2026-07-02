@@ -100,6 +100,32 @@ npx cap open android  # build/submit in Android Studio  (Google Play account)
 The app icons in this repo (`icon-512.png`, etc.) double as the store-icon
 source. Online multiplayer keeps working unchanged inside the native shell.
 
+<!-- TEMPORARY — personal to-do checklist. Delete this whole section once the
+     iOS app is submitted. Tracked here just so it's easy to find later. -->
+### 🚧 TODO — iOS App Store submission (remove this section once done)
+
+> **Temporary note to self:** the repo side is already prepped (see
+> [CAPACITOR.md](CAPACITOR.md) — the signed CI job is wired up and gated behind
+> the `IOS_SIGNING_READY` variable). These remaining steps need my Apple account,
+> so they're on me. **Delete this section once the app is submitted.**
+
+- [ ] **Enroll** in the Apple Developer Program ($99/yr) at developer.apple.com
+- [ ] **Create** an Apple *Distribution* certificate + App Store *provisioning
+      profile* (easiest on the Mac with Xcode, or via a cloud signing service)
+- [ ] **Add 4 GitHub secrets** (Settings → Secrets and variables → Actions → *Secrets*):
+  - [ ] `BUILD_CERT_P12_BASE64` — distribution cert (`.p12`), base64-encoded
+  - [ ] `P12_PASSWORD` — the `.p12` export password
+  - [ ] `PROVISIONING_PROFILE_BASE64` — App Store provisioning profile, base64
+  - [ ] `APPLE_TEAM_ID` — 10-char Team ID (App Store Connect → Membership)
+  - _(base64-encode a file with `base64 -i cert.p12 | pbcopy`)_
+- [ ] **Add 1 GitHub variable** (same page → *Variables* tab): `IOS_SIGNING_READY` = `true`
+- [ ] **Run** the **iOS build** workflow (Actions tab) → download the `ios-ipa` artifact
+- [ ] **Create** the app in App Store Connect + fill the listing (icon, screenshots,
+      description, privacy questionnaire, age rating)
+- [ ] **Upload** the `.ipa` → **Submit for review** (~1–3 days)
+- [ ] ⚠️ If rejected under Guideline 4.2 ("minimum functionality"), add a native
+      touch or two (haptics, share sheet) and resubmit
+
 ## The cards
 
 All 40 cards of the baraja española are drawn programmatically in SVG
