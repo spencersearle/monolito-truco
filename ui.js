@@ -66,9 +66,21 @@
     settingsTitle: $("settings-title"), btnCloseSettings: $("btn-close-settings"),
     setSound: $("set-sound"), setSoundLabel: $("set-sound-label"),
     setTheme: $("set-theme"), setThemeLabel: $("set-theme-label"),
+    setHaptics: $("set-haptics"), setHapticsLabel: $("set-haptics-label"),
     setReset: $("set-reset"), setStatsLabel: $("set-stats-label"),
     settingsPrivacy: $("settings-privacy"),
+    setBlocked: $("set-blocked"), setBlockedLabel: $("set-blocked-label"),
+    settingsPolicyLink: $("settings-policy-link"),
     btnFlorSolo: $("btn-flor-solo"), btnFlorOnline: $("btn-flor-online"),
+    // moderation (chat report/block) + the one-time content agreement
+    chatHint: $("chat-hint"),
+    modOverlay: $("mod-overlay"), modTitle: $("mod-title"),
+    modWho: $("mod-who"), modText: $("mod-text"), modNote: $("mod-note"),
+    btnModReport: $("btn-mod-report"), btnModBlock: $("btn-mod-block"),
+    btnModCancel: $("btn-mod-cancel"),
+    termsOverlay: $("terms-overlay"), termsTitle: $("terms-title"),
+    termsBody: $("terms-body"), termsPolicyLink: $("terms-policy-link"),
+    btnTermsAccept: $("btn-terms-accept"), btnTermsDecline: $("btn-terms-decline"),
   };
 
   /* ---------- i18n (English / Spanish) ---------- */
@@ -213,9 +225,31 @@
       // settings
       settingsTitle: "SETTINGS", soundLabel: "SOUND", on: "ON", off: "OFF",
       appearance: "APPEARANCE", dark: "DARK", light: "LIGHT",
+      hapticsLabel: "VIBRATION",
       soloRecordLabel: "SOLO RECORD", reset: "RESET", resetConfirm: "SURE?", resetDone: "CLEARED",
       privacyNote: "Private by design — no accounts, no ads, no tracking, nothing stored on servers. " +
         "Online play links devices directly (peer-to-peer); names and table talk exist only during the game.",
+      policyLink: "Privacy Policy & Terms",
+      // moderation
+      blockedLabel: "BLOCKED PLAYERS", blockedNone: "NONE",
+      blockedCount: (n) => `CLEAR (${n})`, blockedCleared: "CLEARED",
+      chatHint: "Tap a message to report or block its sender.",
+      modTitle: "MESSAGE FROM",
+      modReport: "⚑ REPORT MESSAGE", modBlock: "⊘ BLOCK PLAYER",
+      modUnblock: "⊙ UNBLOCK PLAYER", modCancel: "CANCEL",
+      modNote: "Reporting hides this player's messages for you right away and logs the report on this device. " +
+        "Blocking hides them without filing a report.",
+      modReported: (n) => `Reported — ${n} is now blocked`,
+      modBlocked: (n) => `${n} is blocked — you won't see their messages`,
+      modUnblocked: (n) => `${n} is unblocked`,
+      blockedMsg: "Message hidden — player blocked",
+      // one-time content agreement
+      termsTitle: "BEFORE YOU PLAY ONLINE",
+      termsBody: "Online tables have a chat, so you may see messages written by other players. " +
+        "There is no tolerance for abusive or objectionable content. Tap any message to report it or " +
+        "block its sender — blocked players' messages disappear immediately, and strong language is " +
+        "filtered automatically.",
+      termsAccept: "I AGREE", termsDecline: "BACK",
     },
     es: {
       splashTag: "Envido · Truco · Vale Cuatro — primero a 30",
@@ -329,9 +363,31 @@
       chatYouAre: (n) => `Ahora sos ${n}`,
       settingsTitle: "AJUSTES", soundLabel: "SONIDO", on: "SÍ", off: "NO",
       appearance: "APARIENCIA", dark: "OSCURO", light: "CLARO",
+      hapticsLabel: "VIBRACIÓN",
       soloRecordLabel: "RÉCORD SOLO", reset: "BORRAR", resetConfirm: "¿SEGURO?", resetDone: "BORRADO",
       privacyNote: "Privado por diseño — sin cuentas, sin publicidad, sin rastreo, nada guardado en servidores. " +
         "El juego online conecta los dispositivos directamente (peer-to-peer); los nombres y la charla existen solo durante la partida.",
+      policyLink: "Política de Privacidad y Términos",
+      // moderación
+      blockedLabel: "JUGADORES BLOQUEADOS", blockedNone: "NINGUNO",
+      blockedCount: (n) => `BORRAR (${n})`, blockedCleared: "BORRADO",
+      chatHint: "Tocá un mensaje para denunciarlo o bloquear a quien lo mandó.",
+      modTitle: "MENSAJE DE",
+      modReport: "⚑ DENUNCIAR MENSAJE", modBlock: "⊘ BLOQUEAR JUGADOR",
+      modUnblock: "⊙ DESBLOQUEAR JUGADOR", modCancel: "CANCELAR",
+      modNote: "Denunciar oculta los mensajes de este jugador al instante y guarda la denuncia en este dispositivo. " +
+        "Bloquear lo oculta sin presentar denuncia.",
+      modReported: (n) => `Denunciado — ${n} quedó bloqueado`,
+      modBlocked: (n) => `${n} está bloqueado — no vas a ver sus mensajes`,
+      modUnblocked: (n) => `${n} está desbloqueado`,
+      blockedMsg: "Mensaje oculto — jugador bloqueado",
+      // acuerdo de contenido, una sola vez
+      termsTitle: "ANTES DE JUGAR ONLINE",
+      termsBody: "Las mesas online tienen chat, así que podés ver mensajes escritos por otros jugadores. " +
+        "No se tolera el contenido abusivo ni ofensivo. Tocá cualquier mensaje para denunciarlo o bloquear " +
+        "a quien lo mandó — los mensajes de los bloqueados desaparecen al instante, y las malas palabras se " +
+        "filtran automáticamente.",
+      termsAccept: "ACEPTO", termsDecline: "VOLVER",
     },
   };
 
@@ -574,6 +630,7 @@
 
   function flash(text) {
     Sound.play("call");
+    Haptics.call();
     el.callflash.textContent = text;
     el.callflash.classList.remove("hidden");
     el.callflash.style.animation = "none";
@@ -700,6 +757,7 @@
           const row = ev.player === "you" ? el.playedYou : el.playedAi;
           const c = makeCardEl(ev.card, false);
           Sound.play("card");
+          if (ev.player === "you") Haptics.tap();
           c.classList.add("thrown");
           row.appendChild(c);
           renderHands(false);
@@ -721,6 +779,7 @@
           if (tr.winner === "you") { yCard?.classList.add("trick-win"); aCard?.classList.add("trick-lose"); }
           else if (tr.winner === "ai") { aCard?.classList.add("trick-win"); yCard?.classList.add("trick-lose"); }
           if (tr.winner !== "tie") Sound.play("trick");
+          if (tr.winner === "you") Haptics.trick();
           renderPips();
           msg(tr.winner === "tie" ? t("parda") :
               local2 ? t("oppTakesTrick", seatLabel1(tr.winner)) :
@@ -961,6 +1020,7 @@
     div.className = "endgame";
     const won = winner === "you";
     Sound.play(local2 || won ? "win" : "lose");
+    if (local2 || won) Haptics.win(); else Haptics.lose();
     const title = won
       ? (local2 ? t("p1Wins") : t("youWin"))
       : net ? t("oppWins", esc((rivalName || "YOUR RIVAL").toUpperCase()))
@@ -1087,6 +1147,7 @@
           const slot = PLAYED_ELS[seatPos(ev.seat)]();
           const c = makeCardEl(ev.card, false);
           Sound.play("card");
+          if (room && ev.seat === room.mySeat) Haptics.tap();
           c.classList.add("thrown");
           slot.appendChild(c);
           renderHands4(false);
@@ -1110,6 +1171,7 @@
             card.classList.add(seat === ev.winnerSeat ? "trick-win" : "trick-lose");
           }
           if (ev.winner !== "tie") Sound.play("trick");
+          if (room && ev.winnerSeat !== null && ev.winnerSeat % 2 === myTeam()) Haptics.trick();
           renderPips4();
           msg(ev.winner === "tie" ? t("parda") :
               ev.winnerSeat === room.mySeat ? t("youTakeTrick4") :
@@ -1334,6 +1396,7 @@
     const div = document.createElement("div");
     div.className = "endgame";
     Sound.play(winnerTeam === myTeam() ? "win" : "lose");
+    if (winnerTeam === myTeam()) Haptics.win(); else Haptics.lose();
     const mates = [winnerTeam, winnerTeam + 2]
       .map((s) => (s === room.mySeat ? t("you") : esc(room.seats[s].name.toUpperCase())));
     const title = winnerTeam === myTeam() ? t("yourTeamWins") : t("teamWins", mates.join(" & "));
@@ -1797,6 +1860,13 @@
   function chatAvailable() { return !!(net || room); }
 
   function addChat(who, text, mine, sys = false) {
+    /* Guideline 1.2, in order: a blocked player's message never renders,
+       and anything that does render is filtered first. Own messages are
+       filtered on the way out (sendChat), so they arrive clean. */
+    const blocked = !sys && !mine && Moderation.isBlocked(who);
+    if (blocked) return;
+    if (!sys) text = Moderation.filterText(text);
+
     const div = document.createElement("div");
     div.className = "chat-msg" + (mine ? " chat-mine" : "") + (sys ? " chat-sys" : "");
     if (!sys) {
@@ -1806,6 +1876,18 @@
       div.appendChild(w);
     }
     div.appendChild(document.createTextNode(text));
+
+    // Someone else's message opens the report/block sheet on tap.
+    if (!sys && !mine) {
+      div.classList.add("chat-actionable");
+      div.tabIndex = 0;
+      div.setAttribute("role", "button");
+      div.addEventListener("click", () => openModMenu(who, text));
+      div.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModMenu(who, text); }
+      });
+    }
+
     el.chatLog.appendChild(div);
     el.chatLog.scrollTop = el.chatLog.scrollHeight;
     while (el.chatLog.children.length > 120) el.chatLog.firstChild.remove();
@@ -1814,6 +1896,16 @@
       renderChatBadges();
       chatToast(who, text, sys);
       if (!sys) Sound.play("chat");
+    }
+  }
+
+  /* Drop every message already on screen from a player who was just
+     blocked — blocking has to clear the backlog, not only the future. */
+  function purgeBlocked() {
+    for (const div of [...el.chatLog.children]) {
+      if (div.classList.contains("chat-sys") || div.classList.contains("chat-mine")) continue;
+      const who = div.querySelector(".chat-who");
+      if (who && Moderation.isBlocked(who.textContent)) div.remove();
     }
   }
 
@@ -1856,8 +1948,52 @@
 
   function closeChat() { el.chatPanel.classList.add("hidden"); }
 
+  /* ---------- report / block sheet ---------- */
+
+  let modTarget = null;   // { who, text } of the tapped message
+
+  function openModMenu(who, text) {
+    modTarget = { who, text };
+    el.modWho.textContent = who;
+    el.modText.textContent = text;
+    el.btnModBlock.textContent = Moderation.isBlocked(who) ? t("modUnblock") : t("modBlock");
+    el.modOverlay.classList.remove("hidden");
+    Haptics.tap();
+  }
+
+  function closeModMenu() {
+    el.modOverlay.classList.add("hidden");
+    modTarget = null;
+  }
+
+  function doReport() {
+    if (!modTarget) return;
+    const { who, text } = modTarget;
+    Moderation.report(who, text);   // records it and blocks in one step
+    closeModMenu();
+    purgeBlocked();
+    chatSys(t("modReported", who));
+    renderSettings();
+  }
+
+  function doBlockToggle() {
+    if (!modTarget) return;
+    const { who } = modTarget;
+    if (Moderation.isBlocked(who)) {
+      Moderation.unblock(who);
+      closeModMenu();
+      chatSys(t("modUnblocked", who));
+    } else {
+      Moderation.block(who);
+      closeModMenu();
+      purgeBlocked();
+      chatSys(t("modBlocked", who));
+    }
+    renderSettings();
+  }
+
   function sendChat(text) {
-    text = text.trim().slice(0, 160);
+    text = Moderation.filterText(text.trim().slice(0, 160));
     if (!text || !chatAvailable()) return;
     addChat(myName(), text, true);
     if (room && room.role === "host") Net.broadcast({ t: "chat", name: room.seats[0].name, text });
@@ -2226,11 +2362,41 @@
   }
 
   /* the online menu: name + mode choice */
+  /* Guideline 1.2 wants players to have agreed there's no tolerance for
+     objectionable content before they can reach user-generated content.
+     Shown once, then remembered; `after` runs on accept. */
+  let termsNext = null;
+
+  /* Returns true when the caller may proceed. When it returns false the
+     gate is on screen and `after` is what runs on accept — so callers
+     pass themselves and simply bail out, then get re-entered cleanly.
+     (Calling `after()` here instead would recurse forever, since every
+     caller's first act is to consult this gate again.) */
+  function requireTerms(after) {
+    if (Moderation.termsAccepted()) return true;
+    termsNext = after;
+    el.termsOverlay.classList.remove("hidden");
+    return false;
+  }
+
+  el.btnTermsAccept.addEventListener("click", () => {
+    Moderation.acceptTerms();
+    el.termsOverlay.classList.add("hidden");
+    const next = termsNext;
+    termsNext = null;
+    if (next) next();
+  });
+  el.btnTermsDecline.addEventListener("click", () => {
+    el.termsOverlay.classList.add("hidden");
+    termsNext = null;
+  });
+
   function openOnlineMenu() {
     if (!Net.available()) {
       showNotice(t("onlineTitle"), t("noNet"));
       return;
     }
+    if (!requireTerms(openOnlineMenu)) return;
     showOverlay(t("onlineTitle"), t("pickTable"));
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
     el.onlineNamebox.classList.remove("hidden");
@@ -2250,6 +2416,7 @@
       showNotice(t("joinTableTitle"), t("noNet"));
       return;
     }
+    if (!requireTerms(openJoinPrompt)) return;
     showOverlay(t("joinTableTitle"), t("joinPrompt"));
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
     el.joinCode.value = "";
@@ -2383,6 +2550,7 @@
   /* a shared #join / #join4 link: prefill the code, ask for a name, then join.
      (The link still works; the code is the primary way in.) */
   function openJoinLink(code) {
+    if (!requireTerms(() => openJoinLink(code))) return;
     showOverlay(t("joinTableTitle"), t("invitedTxt"));
     el.onlineName.value = localStorage.getItem("monolito-name") || "";
     el.joinCode.value = code.toUpperCase();
@@ -2493,9 +2661,23 @@
     el.settingsTitle.textContent = t("settingsTitle");
     el.setSoundLabel.textContent = t("soundLabel");
     el.setThemeLabel.textContent = t("appearance");
+    el.setHapticsLabel.textContent = t("hapticsLabel");
     el.setStatsLabel.textContent = t("soloRecordLabel");
+    el.setBlockedLabel.textContent = t("blockedLabel");
     el.settingsPrivacy.textContent = t("privacyNote");
+    el.settingsPolicyLink.textContent = t("policyLink");
     el.btnCloseSettings.textContent = t("back");
+    // moderation chrome
+    el.chatHint.textContent = t("chatHint");
+    el.modTitle.textContent = t("modTitle");
+    el.modNote.textContent = t("modNote");
+    el.btnModReport.textContent = t("modReport");
+    el.btnModCancel.textContent = t("modCancel");
+    el.termsTitle.textContent = t("termsTitle");
+    el.termsBody.textContent = t("termsBody");
+    el.termsPolicyLink.textContent = t("policyLink");
+    el.btnTermsAccept.textContent = t("termsAccept");
+    el.btnTermsDecline.textContent = t("termsDecline");
     renderSettings();
     renderFlorToggles();
   }
@@ -2531,8 +2713,12 @@
   function renderSettings() {
     el.setSound.textContent = Sound.muted() ? t("off") : t("on");
     el.setTheme.textContent = theme === "light" ? t("light") : t("dark");
+    el.setHaptics.textContent = Haptics.off() ? t("off") : t("on");
     el.setReset.textContent = t("reset");
     el.setReset.disabled = false;
+    const n = Moderation.blocked().length;
+    el.setBlocked.textContent = n ? t("blockedCount", n) : t("blockedNone");
+    el.setBlocked.disabled = n === 0;
   }
 
   el.settingsToggle.addEventListener("click", () => {
@@ -2543,6 +2729,10 @@
   el.setSound.addEventListener("click", () => {
     Sound.toggle();
     if (!Sound.muted()) Sound.play("trick");   // a quick audible confirmation
+    renderSettings();
+  });
+  el.setHaptics.addEventListener("click", () => {
+    Haptics.toggle();   // toggling on buzzes once as confirmation
     renderSettings();
   });
   el.setTheme.addEventListener("click", () => {
@@ -2563,6 +2753,19 @@
     el.setReset.textContent = t("resetDone");
     el.setReset.disabled = true;
   });
+
+  /* unblock everyone at once */
+  el.setBlocked.addEventListener("click", () => {
+    Moderation.clearBlocks();
+    el.setBlocked.textContent = t("blockedCleared");
+    el.setBlocked.disabled = true;
+  });
+
+  /* report / block sheet */
+  el.btnModReport.addEventListener("click", doReport);
+  el.btnModBlock.addEventListener("click", doBlockToggle);
+  el.btnModCancel.addEventListener("click", closeModMenu);
+  el.modOverlay.addEventListener("click", (e) => { if (e.target === el.modOverlay) closeModMenu(); });
 
   const toggleFlor = () => {
     florOn = !florOn;

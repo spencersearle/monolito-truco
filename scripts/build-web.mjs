@@ -14,6 +14,7 @@ const out = join(root, 'www');
 // The exact set of files the running game needs in the browser.
 const ASSETS = [
   'index.html',
+  'privacy.html',
   'styles.css',
   'manifest.webmanifest',
   'sw.js',
@@ -31,6 +32,8 @@ const ASSETS = [
   'ai4.js',
   'net.js',
   'sound.js',
+  'haptics.js',
+  'moderation.js',
   'ui.js',
 ];
 

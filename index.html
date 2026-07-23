@@ -110,6 +110,10 @@
         <button class="btn btn-ghost settings-btn" id="set-sound">ON</button>
       </div>
       <div class="settings-row">
+        <span class="settings-label" id="set-haptics-label">VIBRATION</span>
+        <button class="btn btn-ghost settings-btn" id="set-haptics">ON</button>
+      </div>
+      <div class="settings-row">
         <span class="settings-label" id="set-theme-label">APPEARANCE</span>
         <button class="btn btn-ghost settings-btn" id="set-theme">DARK</button>
       </div>
@@ -117,7 +121,16 @@
         <span class="settings-label" id="set-stats-label">SOLO RECORD</span>
         <button class="btn btn-ghost settings-btn" id="set-reset">RESET</button>
       </div>
+      <div class="settings-row" id="set-blocked-row">
+        <span class="settings-label" id="set-blocked-label">BLOCKED PLAYERS</span>
+        <button class="btn btn-ghost settings-btn" id="set-blocked">NONE</button>
+      </div>
       <p class="settings-note" id="settings-privacy"></p>
+      <p class="settings-note">
+        <a class="settings-link" id="settings-policy-link" href="privacy.html" target="_blank" rel="noopener">
+          Privacy Policy &amp; Terms
+        </a>
+      </p>
       <p class="settings-version">MONOLITO · v1.0.0</p>
       <button class="btn btn-gold" id="btn-close-settings">BACK</button>
     </div>
@@ -282,12 +295,41 @@
       <button class="chat-close" id="btn-chat-close" title="Close chat">✕</button>
     </div>
     <div class="chat-log" id="chat-log"></div>
+    <p class="chat-hint" id="chat-hint">Tap a message to report or block its sender.</p>
     <form class="chat-form" id="chat-form">
       <input class="chat-input" id="chat-input" maxlength="160" autocomplete="off"
              spellcheck="false" placeholder="Say something…">
       <button class="chat-send" type="submit">➤</button>
     </form>
   </aside>
+
+  <!-- Moderation: report / block the sender of a tapped message (Guideline 1.2) -->
+  <div class="overlay hidden" id="mod-overlay">
+    <div class="overlay-panel mod-panel">
+      <h2 id="mod-title">MESSAGE FROM</h2>
+      <p class="mod-who" id="mod-who"></p>
+      <p class="mod-text" id="mod-text"></p>
+      <button class="btn btn-ghost mod-btn" id="btn-mod-report">⚑ REPORT MESSAGE</button>
+      <button class="btn btn-ghost mod-btn" id="btn-mod-block">⊘ BLOCK PLAYER</button>
+      <p class="settings-note" id="mod-note"></p>
+      <button class="btn btn-gold" id="btn-mod-cancel">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- One-time content agreement, shown before the first online game -->
+  <div class="overlay hidden" id="terms-overlay">
+    <div class="overlay-panel terms-panel">
+      <h2 id="terms-title">BEFORE YOU PLAY ONLINE</h2>
+      <p class="terms-body" id="terms-body"></p>
+      <p class="settings-note">
+        <a class="settings-link" id="terms-policy-link" href="privacy.html" target="_blank" rel="noopener">
+          Privacy Policy &amp; Terms
+        </a>
+      </p>
+      <button class="btn btn-gold" id="btn-terms-accept">I AGREE</button>
+      <button class="btn btn-ghost" id="btn-terms-decline">BACK</button>
+    </div>
+  </div>
 
   <script src="peerjs.min.js"></script>
   <script src="cards.js"></script>
@@ -297,6 +339,8 @@
   <script src="ai4.js"></script>
   <script src="net.js"></script>
   <script src="sound.js"></script>
+  <script src="haptics.js"></script>
+  <script src="moderation.js"></script>
   <script src="ui.js"></script>
 
   <!-- Register the service worker (installable PWA + offline play) -->

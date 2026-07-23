@@ -143,7 +143,33 @@ Rationale / how to answer:
 - One caveat to be aware of (not a questionnaire answer): connecting to online play contacts the **public PeerJS signaling broker** (0.peerjs.com) to exchange connection info, and WebRTC exchanges IP addresses between peers to establish the direct connection. This is standard connection plumbing, not data collection by you. If a reviewer asks, describe it exactly that way.
 - Answer **No** to: tracking, third-party advertising, data linked to identity, data used for tracking.
 - Privacy Nutrition Label result: **"Data Not Collected."**
-- You'll also need a **privacy policy URL** (required even for Data Not Collected). A one-paragraph page on GitHub Pages stating the above is enough.
+- The **privacy policy URL** (required even for Data Not Collected) is the page shipped in this repo:
+  `https://spencersearle.github.io/monolito-truco/privacy.html` (source: `privacy.html`). It also carries
+  the terms of use and the support contact address.
+
+---
+
+## 6b. User-Generated Content (Guideline 1.2) — what to tell the reviewer
+
+Online tables have a chat, which makes this a UGC app. All four things Apple requires are implemented;
+say so explicitly in the **App Review notes**, because a reviewer playing solo will never see the chat:
+
+- **Filtering** — profanity and slurs are masked automatically in English and Spanish, on both the
+  sending and receiving side (`moderation.js`).
+- **Reporting** — tapping any message opens a sheet with **REPORT MESSAGE**; the report is logged and
+  the sender is blocked on the spot.
+- **Blocking** — the same sheet offers **BLOCK PLAYER**; their messages vanish immediately, including
+  the ones already on screen, and stay hidden in future games. Manageable under Settings → Blocked Players.
+- **Terms + contact** — a one-time agreement gate appears before the first online game stating there is
+  no tolerance for objectionable content, and `privacy.html` publishes the support address with a
+  24-hour response commitment.
+
+Suggested App Review note:
+
+> Online play uses peer-to-peer WebRTC and includes a text chat. To see the moderation tools you need two
+> devices: open PLAY ONLINE on one to get a table code, then JOIN GAME with that code on the other. In the
+> chat, tap any message from the other player to open the report/block sheet. Profanity is filtered
+> automatically. Blocked players are listed under Settings → Blocked Players.
 
 ---
 
@@ -155,6 +181,9 @@ Expected result: **4+** (or 12+ only if you flag frequent mild language — you 
 - Realistic violence: **None**
 - Sexual content / nudity: **None**
 - Profanity or crude humor: **None** — the AI's taunts are mild, playful trash talk with no profanity. If in doubt about a specific taunt string, "Infrequent/Mild" profanity → 9+, but current content shouldn't require it.
+- **Unrestricted web access: No.** **User-generated content: Yes** — the online chat. Apple's questionnaire
+  asks about this separately from the 1.2 requirements; answering Yes with the moderation tools in place is
+  the correct, safe answer. Expect the rating to land at **12+** because of the chat, not 4+.
 - Horror/fear themes: **None**
 - **Simulated gambling: NO** — Truco is a trick-taking card game with **no wagering, no chips, no currency, no betting of any kind**. "Points" are game score only. Using playing cards alone does not make a game simulated gambling.
 - Contests: **None**

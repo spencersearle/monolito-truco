@@ -25,6 +25,7 @@ and tablets.
 - Rules verified against independent sources — and the **2v2 team rules**
   separately — see [RULES.md](RULES.md)
 - 128 engine tests: `node test_engine.js` (1v1, incl. Flor) + `node test_engine4.js` (2v2)
+- 58 moderation tests: `node test_moderation.js` — `npm test` runs all three
 
 ## Play online
 
@@ -44,7 +45,10 @@ Hit **PLAY ONLINE** on the title screen, type your name, and pick a table:
   link still works too, and the mode is detected automatically on connect.)
 - **Table talk** — a built-in chat works in the lobby and at the table. New
   messages pop a toast with the sender's name and a count on the chat icon, in
-  both modes.
+  both modes. Strong language is filtered automatically (English and Spanish),
+  and tapping any message lets you **report or block** its sender — a blocked
+  player's messages vanish from the log immediately and stay hidden in later
+  games. Manage the list under Settings → Blocked Players.
 - **Change your name anytime** — rename yourself in the lobby or mid-game with
   the ✎ button; the new name updates on every screen.
 
@@ -122,9 +126,16 @@ source. Online multiplayer keeps working unchanged inside the native shell.
 - [ ] **Run** the **iOS build** workflow (Actions tab) → download the `ios-ipa` artifact
 - [ ] **Create** the app in App Store Connect + fill the listing (icon, screenshots,
       description, privacy questionnaire, age rating)
+- [ ] **Paste the privacy policy URL** — it ships as `privacy.html`, so it's live at
+      `https://spencersearle.github.io/monolito-truco/privacy.html` as soon as main is pushed
+- [ ] **Answer "Yes"** to user-generated content in the age-rating questionnaire (the chat);
+      expect a **12+** rating, and paste the App Review note from
+      [STORE_LISTING.md](STORE_LISTING.md) §6b so the reviewer can find the report/block tools
 - [ ] **Upload** the `.ipa` → **Submit for review** (~1–3 days)
-- [ ] ⚠️ If rejected under Guideline 4.2 ("minimum functionality"), add a native
-      touch or two (haptics, share sheet) and resubmit
+
+> Guideline 1.2 (UGC moderation: filter, report, block, terms, contact) and the
+> native-feel side of Guideline 4.2 (haptics) are handled in code — see
+> `moderation.js`, `haptics.js`, and `privacy.html`.
 
 ## The cards
 
@@ -159,8 +170,13 @@ python3 -m http.server 8000
 | `ai4.js` | Team-aware bots for 2v2 (don't trump the partner's winner) |
 | `net.js` | PeerJS transport: 1v1 link + 2v2 star room with host relay |
 | `peerjs.min.js` | Vendored PeerJS 1.5.5 |
+| `sound.js` | WebAudio synth for game sounds — no audio files, works offline |
+| `haptics.js` | Native touch feedback via Capacitor Haptics (falls back to `navigator.vibrate`) |
+| `moderation.js` | Chat filtering, blocking, reporting — the Guideline 1.2 machinery |
+| `privacy.html` | Privacy policy, terms of use, and support contact |
 | `ui.js` | Animation queue, presenters (1v1 + 2v2), lobby, chat, game flow |
 | `test_engine.js` | 1v1 rule verification suite (66 tests, incl. snapshot/mirror/restore) |
+| `test_moderation.js` | Chat filter / block / report suite (58 tests) |
 | `test_engine4.js` | 2v2 team-rule verification suite (35 tests, incl. snapshot/restore) |
 | `test_multiplayer_sim.js` | Lockstep-replication fuzz test for 1v1 online |
 | `test_multiplayer_sim4.js` | Lockstep fuzz for 2v2: host + 3 guest engines |

@@ -1360,6 +1360,57 @@ body {
 .chat-msg.chat-mine .chat-who { color: var(--gold-bright); }
 .chat-msg.chat-sys { color: rgba(156, 196, 255, .65); font-style: italic; font-size: .82rem; }
 
+/* Someone else's message is tappable — it opens the report/block menu.
+   Own messages and system lines stay inert. */
+.chat-msg.chat-actionable { cursor: pointer; border-radius: 8px; padding: 2px 6px; margin: 0 -6px; }
+.chat-msg.chat-actionable:hover,
+.chat-msg.chat-actionable:focus-visible {
+  background: rgba(156, 196, 255, .1);
+  outline: none;
+}
+.chat-msg.chat-blocked { opacity: .45; font-style: italic; color: rgba(156, 196, 255, .6); }
+
+.chat-hint {
+  margin: 0;
+  padding: 0 12px 8px;
+  font-size: .68rem;
+  letter-spacing: .04em;
+  color: rgba(156, 196, 255, .5);
+  text-align: center;
+}
+
+/* Report / block sheet */
+.mod-panel { max-width: 340px; }
+.mod-who {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--gold-bright);
+  text-align: center;
+}
+.mod-text {
+  margin: 0;
+  font-size: .88rem;
+  line-height: 1.4;
+  color: rgba(245, 234, 209, .8);
+  text-align: center;
+  overflow-wrap: break-word;
+  max-height: 5.6em;
+  overflow-y: auto;
+}
+.mod-btn { width: 100%; }
+
+.terms-panel { max-width: 380px; }
+.terms-body {
+  margin: 0;
+  font-size: .86rem;
+  line-height: 1.6;
+  color: rgba(245, 234, 209, .82);
+}
+
+.settings-link { color: var(--gold-bright); text-decoration: underline; }
+.settings-link:hover { color: var(--ice); }
+
 .chat-form {
   display: flex;
   gap: 8px;
@@ -1725,6 +1776,9 @@ body.theme-light .online-name,
 body.theme-light .online-link { background: rgba(255, 255, 255, .75); color: #14224a; border-color: rgba(29, 92, 214, .4); }
 body.theme-light .online-code { background: rgba(255, 255, 255, .75); color: #8a6410; }
 body.theme-light .settings-note { color: rgba(20, 34, 74, .7); }
+body.theme-light .terms-body { color: rgba(20, 34, 74, .85); }
+body.theme-light .mod-text { color: rgba(20, 34, 74, .8); }
+body.theme-light .settings-link { color: #9a6b13; }
 body.theme-light .settings-version { color: rgba(29, 92, 214, .6); }
 body.theme-light .lang-toggle { background: rgba(255, 255, 255, .6); color: #8a6410; }
 body.theme-light .lobby-name { color: #14224a; }
