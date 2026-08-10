@@ -106,6 +106,7 @@
       splashTag: "Envido · Truco · Vale Cuatro — first to 30",
       dealMeIn: "DEAL ME IN", playOnline: "⟡ PLAY ONLINE", joinGame: "⇥ JOIN GAME",
       howToPlay: "HOW TO PLAY", back: "BACK",
+      backAgain: "Press back again to leave the table",
       soloStatus: "A quick game right here on this device.",
       playBot: "⚔  PLAY A BOT", passPlay: "👥  PASS & PLAY",
       soloHint: "Pass & play hands one device back and forth between two players.",
@@ -255,6 +256,7 @@
       splashTag: "Envido · Truco · Vale Cuatro — primero a 30",
       dealMeIn: "A JUGAR", playOnline: "⟡ JUGAR ONLINE", joinGame: "⇥ ENTRAR A UNA MESA",
       howToPlay: "CÓMO JUGAR", back: "VOLVER",
+      backAgain: "Tocá atrás de nuevo para dejar la mesa",
       soloStatus: "Una partida rápida acá mismo, en este dispositivo.",
       playBot: "⚔  JUGAR VS BOT", passPlay: "👥  PASAR Y JUGAR",
       soloHint: "Pasar y jugar: un solo dispositivo que va y viene entre dos jugadores.",
@@ -2876,6 +2878,71 @@
     sendChat(el.chatInput.value);
     el.chatInput.value = "";
   });
+
+  /* ---------- Android back button ---------- */
+
+  /* Android hands every back press to the app (see nativeback.js). "Back"
+     has to mean the same thing it means on screen: dismiss whatever is on
+     top, and once nothing is, leave the table — then the app.
+
+     Order matters. It is the reverse of the order things stack visually,
+     so the first match wins and each press peels exactly one layer. */
+
+  let leaveArmed = 0;   // timestamp of a first back press during a match
+
+  /* Leaving mid-hand costs a real game (and strands a rival online), so it
+     takes two presses. The hint goes in the dock, which is on screen for the
+     whole match, and yields to any play-by-play that lands on top of it. */
+  function armLeave() {
+    const hint = t("backAgain");
+    const prev = el.dockMsg.textContent;
+    leaveArmed = Date.now();
+    msg(hint);
+    setTimeout(() => {
+      if (Date.now() - leaveArmed < 1900) return;      // re-armed since
+      leaveArmed = 0;
+      if (el.dockMsg.textContent === hint) msg(prev);  // a real event won instead
+    }, 2000);
+  }
+
+  function leaveTable() {
+    leaveArmed = 0;
+    leaveNet();
+    leaveNet4();
+    exitToSplash();
+  }
+
+  const shown = (node) => node && !node.classList.contains("hidden");
+
+  function handleBack() {
+    // top-most layers first — each press closes exactly one
+    if (shown(el.modOverlay)) return closeModMenu();
+    if (shown(el.termsOverlay)) {
+      el.termsOverlay.classList.add("hidden");
+      termsNext = null;                       // declining, same as the button
+      return;
+    }
+    if (shown(el.namePanel)) return closeNamePanel();
+    if (shown(el.chatPanel)) return closeChat();
+    if (shown(el.rulesOverlay)) return el.rulesOverlay.classList.add("hidden");
+    if (shown(el.settingsOverlay)) return el.settingsOverlay.classList.add("hidden");
+    if (shown(el.soloOverlay)) return el.soloOverlay.classList.add("hidden");
+    if (shown(el.onlineOverlay)) return closeOverlay();
+
+    // the match is already over — nothing to lose, so one press is enough
+    if (document.querySelector(".endgame")) return leaveTable();
+
+    // mid-match (including behind a pass & play gate): confirm before leaving
+    if (shown(el.stage)) {
+      if (leaveArmed && Date.now() - leaveArmed < 2000) return leaveTable();
+      return armLeave();
+    }
+
+    // on the splash with nothing open: back out of the app, like any other
+    NativeBack.exit();
+  }
+
+  NativeBack.onBack(handleBack);
 
   // deep links still work: #join=<code> or #join4=<code> prefill the code and
   // ask for a name (mode is detected on connect); #play goes straight to solo

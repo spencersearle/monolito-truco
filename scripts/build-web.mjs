@@ -34,6 +34,7 @@ const ASSETS = [
   'sound.js',
   'haptics.js',
   'moderation.js',
+  'nativeback.js',
   'ui.js',
 ];
 

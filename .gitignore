@@ -17,3 +17,10 @@ android/app/src/main/assets/public/
 *.apk
 *.aab
 *.ipa
+
+# Signing key material — never commit these. The Android upload keystore is
+# irreplaceable: back it up outside the repo (password manager / encrypted drive).
+*.jks
+*.keystore
+*.p12
+*.mobileprovision

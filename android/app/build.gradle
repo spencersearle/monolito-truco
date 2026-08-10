@@ -16,8 +16,31 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    /* Release signing, supplied by the environment so no key material ever
+       lands in the repo. CI sets these from repository secrets (see
+       .github/workflows/android.yml); locally you can export them by hand.
+       When MONOLITO_KEYSTORE is absent the config is simply not created and
+       the build still works — you just get an unsigned AAB, which is fine
+       for compile checks and is exactly what assembleDebug wants. */
+    def keystorePath = System.getenv("MONOLITO_KEYSTORE")
+    def hasKeystore = keystorePath != null && !keystorePath.isEmpty() && file(keystorePath).exists()
+
+    signingConfigs {
+        if (hasKeystore) {
+            release {
+                storeFile file(keystorePath)
+                storePassword System.getenv("MONOLITO_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("MONOLITO_KEY_ALIAS")
+                keyPassword System.getenv("MONOLITO_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
