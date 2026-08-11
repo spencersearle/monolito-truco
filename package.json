@@ -1,6 +1,6 @@
 {
   "name": "monolito-truco",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Argentine Truco card game — web (PWA) + native iOS/Android via Capacitor",
   "scripts": {
