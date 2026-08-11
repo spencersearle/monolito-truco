@@ -22,6 +22,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- monolito://join=<code> — an invite link opened in a browser
+                 hands the table off to the app, so the friend plays here
+                 instead of in the browser. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="monolito" />
+            </intent-filter>
+
         </activity>
 
         <provider

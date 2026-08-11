@@ -30,6 +30,7 @@
     onlineModes: $("online-modes"), btnMode1v1: $("btn-mode-1v1"), btnMode2v2: $("btn-mode-2v2"),
     btnJoinGame: $("btn-join-game"), onlineJoinbox: $("online-joinbox"),
     joinCode: $("join-code"), btnJoinGo: $("btn-join-go"),
+    btnOpenApp: $("btn-open-app"),
     lobbyRoster: $("lobby-roster"), btnStart2v2: $("btn-start-2v2"),
     btnJoin2v2: $("btn-join-2v2"), btnLobbyChat: $("btn-lobby-chat"),
     lobbyChatBadge: $("lobby-chat-badge"), btnLobbyName: $("btn-lobby-name"),
@@ -116,6 +117,7 @@
       // online chrome
       yourName: "YOUR NAME", tableCode: "TABLE CODE", copy: "COPY", copied: "COPIED ✓",
       orCopyLink: "OR COPY A LINK", share: "SHARE…", startGame: "START GAME",
+      openInApp: "↗ OPEN IN THE APP",
       joinTable: "JOIN TABLE", cancel: "CANCEL", editName: "✎ EDIT NAME",
       tableTalkBtn: "💬 TABLE TALK", save: "SAVE", tableTalk: "TABLE TALK",
       sayThis: "Say something…", playerPH: "Player",
@@ -265,6 +267,7 @@
       florToggle: (on) => `CON FLOR (1v1): ${on ? "SÍ" : "NO"}`,
       yourName: "TU NOMBRE", tableCode: "CÓDIGO DE MESA", copy: "COPIAR", copied: "COPIADO ✓",
       orCopyLink: "O COPIAR UN ENLACE", share: "COMPARTIR…", startGame: "EMPEZAR",
+      openInApp: "↗ ABRIR EN LA APP",
       joinTable: "ENTRAR", cancel: "CANCELAR", editName: "✎ CAMBIAR NOMBRE",
       tableTalkBtn: "💬 CHARLA", save: "GUARDAR", tableTalk: "CHARLA DE MESA",
       sayThis: "Decí algo…", playerPH: "Jugador",
@@ -2320,6 +2323,7 @@
     el.onlineModes.classList.add("hidden");
     el.onlineJoinbox.classList.add("hidden");
     el.btnJoinGo.classList.add("hidden");
+    el.btnOpenApp.classList.add("hidden");
     el.lobbyRoster.classList.add("hidden");
     el.btnStart2v2.classList.add("hidden");
     el.btnJoin2v2.classList.add("hidden");
@@ -2581,6 +2585,11 @@
     el.onlineNamebox.classList.remove("hidden");
     el.onlineJoinbox.classList.remove("hidden");
     el.btnJoinGo.classList.remove("hidden");
+    /* In a browser, offer to hand the table to the installed app. Nothing
+       happens if it isn't installed — this page is the fallback, and it plays
+       the game perfectly well on its own. */
+    el.btnOpenApp.classList.toggle("hidden", nativeShell());
+    el.btnOpenApp.dataset.code = code;
   }
 
   /* ---------- rules overlay ---------- */
@@ -2660,7 +2669,7 @@
     <p>An uncontested flor scores <strong>3</strong>. If both sides have flor you compare (higher wins, ties to the mano): <strong>Contraflor</strong> raises it to 6 (decline = 4 to the caller), and <strong>Contraflor al Resto</strong> bets the game.</p>
     <h3>Play Online</h3>
     <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table — <strong>1v1</strong> or <strong>2v2</strong> — and shows a short <strong>table code</strong>. Share the code; friends pick <strong>JOIN GAME</strong> and type it in. The cards fly when everyone is seated. There's a table-talk chat, and empty 2v2 seats can be filled with bots.</p>
-    <p><strong>No app on their phone?</strong> Use <strong>SHARE</strong> or <strong>COPY A LINK</strong> instead of the code. The link opens the game in any browser with the code already filled in, so a friend can sit down at your table without installing anything.</p>
+    <p><strong>Sharing a table.</strong> Use <strong>SHARE</strong> or <strong>COPY A LINK</strong> instead of the code. The link opens the game in any browser with the code already filled in, so a friend can sit down at your table without installing anything — and if they do have the app, that page offers to hand the table straight to it.</p>
     <p><strong>Dropped out?</strong> Just enter the same code again to rejoin — the hand picks up exactly where it left off.</p>
     <h3>2v2 Team Rules</h3>
     <p>Seats alternate teams; your partner sits across the table. The highest card wins the trick for its <strong>team</strong> — if the top cards split between teams it's a parda. Envido is declared from the mano around the table (ties favor whoever is closer to mano), and either member of a team may answer the other side's calls. Folding concedes for your whole team.</p>`,
@@ -2684,7 +2693,7 @@
     <p>La flor sin rival vale <strong>3</strong>. Si los dos tienen flor se compara (gana la más alta, los empates a la mano): <strong>Contraflor</strong> la sube a 6 (si no se quiere, 4 para el que cantó), y <strong>Contraflor al Resto</strong> apuesta el chico.</p>
     <h3>Jugar online</h3>
     <p>Desde la portada, <strong>JUGAR ONLINE</strong> abre una mesa privada — <strong>1v1</strong> o <strong>2v2</strong> — y muestra un <strong>código de mesa</strong> corto. Compartí el código; tus amigos eligen <strong>ENTRAR</strong> y lo escriben. Las cartas vuelan cuando están todos sentados. Hay charla de mesa, y los asientos 2v2 vacíos se pueden llenar con bots.</p>
-    <p><strong>¿No tiene la app?</strong> Usá <strong>COMPARTIR</strong> o <strong>COPIAR UN ENLACE</strong> en vez del código. El enlace abre el juego en cualquier navegador con el código ya cargado, así tu amigo se sienta a tu mesa sin instalar nada.</p>
+    <p><strong>Compartir una mesa.</strong> Usá <strong>COMPARTIR</strong> o <strong>COPIAR UN ENLACE</strong> en vez del código. El enlace abre el juego en cualquier navegador con el código ya cargado, así tu amigo se sienta a tu mesa sin instalar nada — y si tiene la app, esa página le ofrece pasarle la mesa directamente.</p>
     <p><strong>¿Te desconectaste?</strong> Volvé a ingresar el mismo código para reincorporarte — la mano sigue justo donde la dejaste.</p>
     <h3>Reglas 2v2 (en equipo)</h3>
     <p>Los asientos alternan equipos; tu compañero se sienta enfrente. La carta más alta gana la baza para su <strong>equipo</strong> — si las cartas más altas se reparten entre equipos, es parda. El envido se declara desde la mano alrededor de la mesa (los empates favorecen al más cercano a la mano), y cualquiera del equipo puede responder los cantos del otro lado. Irse al mazo entrega por todo tu equipo.</p>`,
@@ -2730,6 +2739,7 @@
     if (codeHint) codeHint.textContent = t("codeHint");
     el.btnCopyLink.textContent = t("orCopyLink");
     el.btnShareLink.textContent = t("share");
+    el.btnOpenApp.textContent = t("openInApp");
     el.btnJoinGo.textContent = t("joinTable");
     el.btnJoin2v2.textContent = t("joinTable");
     el.btnLobbyName.textContent = t("editName");
@@ -2930,6 +2940,11 @@
     setTimeout(() => { el.btnShareLink.textContent = t("share"); }, 1600);
   });
 
+  el.btnOpenApp.addEventListener("click", () => {
+    const code = el.btnOpenApp.dataset.code;
+    if (code) location.href = "monolito://join=" + code;
+  });
+
   el.btnRules.addEventListener("click", () => el.rulesOverlay.classList.remove("hidden"));
   el.btnCloseRules.addEventListener("click", () => el.rulesOverlay.classList.add("hidden"));
   el.btnExit.addEventListener("click", () => {
@@ -3038,4 +3053,19 @@
   const linkMatch = location.hash.match(/^#join4?=([a-z0-9]+)$/i);
   if (linkMatch) openJoinLink(linkMatch[1].toLowerCase());
   else if (location.hash === "#play") el.btnStart.click();
+
+  /* monolito://join=<code> arriving from outside: the invite page in a browser
+     handing the table to the installed app. Same destination as a #join= link,
+     so the friend lands on the name prompt with the code already in. A cold
+     launch reports the URL twice (the event and the launch URL), so only the
+     first one counts. */
+  let lastAppUrlCode = null;
+  NativeBack.onAppUrl((url) => {
+    const m = String(url || "").match(/join4?=([a-z0-9]+)/i);
+    if (!m) return;
+    const code = m[1].toLowerCase();
+    if (code === lastAppUrlCode) return;
+    lastAppUrlCode = code;
+    openJoinLink(code);
+  });
 })();

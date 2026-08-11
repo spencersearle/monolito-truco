@@ -1,7 +1,7 @@
 /* ============================================================
    MONOLITO · nativeback.js
-   The Android hardware/gesture BACK button, through Capacitor's
-   App plugin.
+   Capacitor's App plugin: the Android hardware/gesture BACK
+   button, and URLs handed to the app from outside it.
 
    Android sends every back press to the app; if nothing claims
    it the shell walks the WebView's history or closes the app
@@ -40,6 +40,27 @@
           try { fn(); } catch (e) { /* never let a handler wedge the button */ }
         });
       } catch (e) { /* no App plugin on this build */ }
+    },
+
+    /** Hand `fn` every URL the shell is asked to open — a monolito:// invite
+        tapped in a browser. Covers the cold start too: if the app was launched
+        by the URL, the event may already have fired before ui.js got here, so
+        the launch URL is replayed once. */
+    onAppUrl(fn) {
+      const p = plugin();
+      if (!p) return;
+      try {
+        p.addListener("appUrlOpen", (e) => {
+          try { if (e && e.url) fn(e.url); } catch (err) { /* never wedge the shell */ }
+        });
+      } catch (e) { /* no App plugin on this build */ }
+      try {
+        if (p.getLaunchUrl) {
+          Promise.resolve(p.getLaunchUrl())
+            .then((r) => { if (r && r.url) fn(r.url); })
+            .catch(() => {});
+        }
+      } catch (e) { /* nothing launched us */ }
     },
 
     /** close the app — the honest end of the back stack on Android */
