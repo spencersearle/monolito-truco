@@ -2563,12 +2563,66 @@
 
   /* ---------- rules overlay ---------- */
 
+  /* The card ladder: one face per power tier, strongest first. The tiers and
+     their order come from the engine (Truco.power over the whole deck), so the
+     picture can never drift from the rules the game actually enforces — these
+     two maps only decide which card stands for a tier and what to call it. */
+  const LADDER_FACE = {
+    14: { suit: "espadas", rank: 1 },  13: { suit: "bastos", rank: 1 },
+    12: { suit: "espadas", rank: 7 },  11: { suit: "oros", rank: 7 },
+    10: { suit: "espadas", rank: 3 },   9: { suit: "espadas", rank: 2 },
+     8: { suit: "copas", rank: 1 },     7: { suit: "espadas", rank: 12 },
+     6: { suit: "espadas", rank: 11 },  5: { suit: "espadas", rank: 10 },
+     4: { suit: "copas", rank: 7 },     3: { suit: "espadas", rank: 6 },
+     2: { suit: "espadas", rank: 5 },   1: { suit: "espadas", rank: 4 },
+  };
+
+  const LADDER_CAPTION = {
+    en: {
+      14: "1 espadas", 13: "1 bastos", 12: "7 espadas", 11: "7 oros",
+      10: "the 3s", 9: "the 2s", 8: "1 copas / oros", 7: "the 12s",
+      6: "the 11s", 5: "the 10s", 4: "7 copas / bastos", 3: "the 6s",
+      2: "the 5s", 1: "the 4s",
+    },
+    es: {
+      14: "1 de espadas", 13: "1 de bastos", 12: "7 de espadas", 11: "7 de oros",
+      10: "los 3", 9: "los 2", 8: "1 de copas / oros", 7: "los 12",
+      6: "los 11", 5: "los 10", 4: "7 de copas / bastos", 3: "los 6",
+      2: "los 5", 1: "los 4",
+    },
+  };
+
+  function cardLadderHTML(lang) {
+    const caption = LADDER_CAPTION[lang] || LADDER_CAPTION.en;
+    const ranks = Object.keys(Cards.RANK_LABEL).map(Number);
+
+    const tiers = new Map();                       // power -> cards at that power
+    for (const suit of Cards.SUITS) {
+      for (const rank of ranks) {
+        const p = Truco.power({ suit, rank });
+        if (!tiers.has(p)) tiers.set(p, []);
+        tiers.get(p).push({ suit, rank });
+      }
+    }
+
+    return [...tiers.keys()].sort((a, b) => b - a).map((p, i) => {
+      const face = LADDER_FACE[p] || tiers.get(p)[0];
+      const label = caption[p] ||
+        `${Cards.RANK_LABEL[face.rank]} ${Cards.SUIT_LABEL[face.suit]}`;
+      return `<figure class="ladder-card">
+        <span class="ladder-rank">${i + 1}</span>
+        ${Cards.cardSVG(face.suit, face.rank)}
+        <figcaption>${label}</figcaption>
+      </figure>`;
+    }).join("");
+  }
+
   const RULES_HTML = {
     en: `
     <h3>The Goal</h3>
     <p>First to <strong>30 points</strong>. Each hand you get 3 cards and play up to 3 tricks — win <strong>2 of 3 tricks</strong> to take the hand.</p>
     <h3>Card Power (high → low)</h3>
-    <p><strong>1 espadas</strong> · <strong>1 bastos</strong> · <strong>7 espadas</strong> · <strong>7 oros</strong> · 3s · 2s · 1 copas/oros · 12s · 11s · 10s · 7 copas/bastos · 6s · 5s · 4s</p>
+    <div class="card-ladder" id="card-ladder"></div>
     <p><em>Suit doesn't matter otherwise — equal cards tie (parda), and ties favor whoever won the earliest trick, or the mano.</em></p>
     <h3>Envido</h3>
     <p>Called in the first trick, before you play your first card. Two cards of the same suit are worth their sum <strong>+ 20</strong> (face cards count 0). Best possible: 33.</p>
@@ -2591,7 +2645,7 @@
     <h3>El objetivo</h3>
     <p>Primero a <strong>30 puntos</strong>. En cada mano recibís 3 cartas y se juegan hasta 3 bazas — ganá <strong>2 de 3 bazas</strong> para llevarte la mano.</p>
     <h3>Poder de las cartas (mayor → menor)</h3>
-    <p><strong>1 de espadas</strong> · <strong>1 de bastos</strong> · <strong>7 de espadas</strong> · <strong>7 de oros</strong> · los 3 · los 2 · 1 de copas/oros · los 12 · los 11 · los 10 · 7 de copas/bastos · los 6 · los 5 · los 4</p>
+    <div class="card-ladder" id="card-ladder"></div>
     <p><em>Por lo demás el palo no importa — cartas iguales empatan (parda), y los empates favorecen al que ganó la baza más temprana, o a la mano.</em></p>
     <h3>Envido</h3>
     <p>Se canta en la primera baza, antes de jugar tu primera carta. Dos cartas del mismo palo valen su suma <strong>+ 20</strong> (las figuras cuentan 0). El máximo: 33.</p>
@@ -2639,6 +2693,8 @@
     el.rulesOverlay.querySelector("h2").textContent = t("howToPlay");
     el.btnCloseRules.textContent = t("back");
     el.rulesContent.innerHTML = RULES_HTML[lang] || RULES_HTML.en;
+    const ladder = el.rulesContent.querySelector("#card-ladder");
+    if (ladder) ladder.innerHTML = cardLadderHTML(lang);
     // online + name + chat chrome
     for (const lab of document.querySelectorAll('label[for="online-name"], label[for="name-input"]'))
       lab.textContent = t("yourName");
