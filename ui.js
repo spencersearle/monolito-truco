@@ -112,7 +112,7 @@
       soloHint: "Pass & play hands one device back and forth between two players.",
       passSub: "Pass the device over — your cards are hidden until you tap.",
       ready: "I'M READY",
-      florToggle: (on) => `FLOR: ${on ? "ON" : "OFF"}`,
+      florToggle: (on) => `FLOR (1v1): ${on ? "ON" : "OFF"}`,
       // online chrome
       yourName: "YOUR NAME", tableCode: "TABLE CODE", copy: "COPY", copied: "COPIED ✓",
       orCopyLink: "OR COPY A LINK", share: "SHARE…", startGame: "START GAME",
@@ -262,7 +262,7 @@
       soloHint: "Pasar y jugar: un solo dispositivo que va y viene entre dos jugadores.",
       passSub: "Pasá el dispositivo — tus cartas quedan ocultas hasta que toques.",
       ready: "LISTO",
-      florToggle: (on) => `CON FLOR: ${on ? "SÍ" : "NO"}`,
+      florToggle: (on) => `CON FLOR (1v1): ${on ? "SÍ" : "NO"}`,
       yourName: "TU NOMBRE", tableCode: "CÓDIGO DE MESA", copy: "COPIAR", copied: "COPIADO ✓",
       orCopyLink: "O COPIAR UN ENLACE", share: "COMPARTIR…", startGame: "EMPEZAR",
       joinTable: "ENTRAR", cancel: "CANCELAR", editName: "✎ CAMBIAR NOMBRE",
@@ -424,7 +424,7 @@
   let local2 = false;          // solo: pass-and-play (two humans hot-seat on one device)
   let controller = "you";      // local2: which seat's cards are revealed/playable right now
   let botName = "El Monolito"; // solo vs bot: the AI opponent's name this game
-  let florOn = localStorage.getItem("monolito-flor") === "1"; // optional "con flor" variant (1v1/solo)
+  let florOn = localStorage.getItem("monolito-flor") !== "0"; // "con flor" variant (1v1/solo), on unless turned off
   let rivalName = null;        // 1v1 online rival's name
   let pendingDeal = null;      // 1v1 guest: next hand received mid-animation
   let rivalGone = false;       // 1v1 host: rival dropped, paused waiting for rejoin
