@@ -228,18 +228,27 @@ body {
   backdrop-filter: blur(10px);
 }
 
+/* The panel is capped at 86vh, so anything taller has to scroll inside it —
+   without this the 2v2 lobby (code + link + four seats + four buttons) spills
+   past the bottom of a phone screen and CANCEL becomes unreachable. */
 .overlay-panel {
   width: min(640px, 92vw);
   max-height: 86vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 34px 38px;
+  padding: 34px 38px max(34px, env(safe-area-inset-bottom));
   border-radius: 18px;
   border: 1px solid rgba(212, 160, 42, .5);
   background: linear-gradient(170deg, rgba(18, 48, 110, .65), rgba(10, 26, 58, .9));
   box-shadow: 0 30px 80px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(245, 234, 209, .12);
 }
+
+/* scroll the panel rather than squashing its contents… */
+.overlay-panel > * { flex: 0 0 auto; }
 
 .overlay-panel h2 {
   font-family: var(--font-display);
@@ -248,8 +257,13 @@ body {
   text-align: center;
 }
 
+/* …except the rules body, which owns its own scrollbar and should take
+   whatever height is left over. */
 .rules-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding-right: 10px;
   line-height: 1.65;
   font-size: 1.02rem;
@@ -267,6 +281,51 @@ body {
 .rules-scroll p { margin: 6px 0; }
 .rules-scroll strong { color: var(--gold-bright); }
 .rules-scroll em { color: var(--ice); font-style: normal; }
+
+/* card power ladder — one face per tier, strongest first */
+.card-ladder {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
+  gap: 12px 10px;
+  margin: 12px 0 14px;
+}
+
+.ladder-card {
+  position: relative;
+  margin: 0;
+  text-align: center;
+}
+
+.ladder-card svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.ladder-rank {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  z-index: 1;
+  min-width: 18px;
+  padding: 1px 4px;
+  border-radius: 9px;
+  border: 1px solid rgba(212, 160, 42, .6);
+  background: rgba(4, 10, 28, .92);
+  color: var(--gold-bright);
+  font-family: var(--font-hud);
+  font-size: .6rem;
+  line-height: 1.4;
+}
+
+.ladder-card figcaption {
+  margin-top: 5px;
+  font-size: .66rem;
+  letter-spacing: .04em;
+  line-height: 1.3;
+  color: rgba(245, 234, 209, .75);
+}
 
 .overlay-panel .btn { align-self: center; }
 
@@ -1633,7 +1692,7 @@ body {
   .splash-tag { font-size: .68rem; margin: 16px 0 24px; }
   .splash .btn { display: block; margin: 10px auto; width: min(260px, 82vw); }
 
-  .overlay-panel { padding: 22px 18px; }
+  .overlay-panel { padding: 22px 18px max(22px, env(safe-area-inset-bottom)); gap: 14px; }
   .rules-scroll { font-size: .92rem; }
   .online-status { font-size: .9rem; }
   .online-link { font-size: .76rem; padding: 10px 10px; }
@@ -1769,6 +1828,8 @@ body.theme-light .rules-scroll { color: rgba(20, 34, 74, .85); }
 body.theme-light .rules-scroll strong { color: #8a6410; }
 body.theme-light .rules-scroll h3 { color: #a87b12; }
 body.theme-light .rules-scroll em { color: #1d5cd6; }
+body.theme-light .ladder-card figcaption { color: rgba(20, 34, 74, .8); }
+body.theme-light .ladder-rank { background: rgba(255, 255, 255, .92); color: #8a6410; }
 body.theme-light .online-namelabel,
 body.theme-light .settings-label,
 body.theme-light .online-codelabel { color: #1d5cd6; }
