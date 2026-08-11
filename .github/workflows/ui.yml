@@ -1,0 +1,40 @@
+name: UI tests
+
+# The Node suites prove the rules; these prove the screen. The 2v2 lobby once
+# reached the App Store with its CANCEL button rendered off the bottom of the
+# phone — a layout bug no engine test could see. Layout runs on WebKit, the
+# same engine the iOS app ships in.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Run the browser suite
+        run: npx playwright test
+
+      - name: Upload the report when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
