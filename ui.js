@@ -203,6 +203,7 @@
       rivalDiscTxt: "Waiting for your rival to rejoin — they can re-enter this code in JOIN GAME.",
       tableNotFound: "Table not found — it may have closed. Double-check the code, or ask for a fresh one.",
       netTimeout: "Couldn't reach the table — a network may be blocking the connection. Try again or switch networks.",
+      faceDownCard: "face-down card", playCard: (c) => `Play the ${c}`,
       relayNeeded: "Your two networks can't reach each other directly — mobile data often does this. Try again with one of you on wifi.",
       brokerFail: "Can't reach the matchmaking server — check your connection and try again.",
       tableFull: "That table is full or already in play. Double-check the code, or ask for a new one.",
@@ -346,6 +347,7 @@
       rivalDiscTxt: "Esperando que tu rival vuelva — puede reingresar este código en ENTRAR A UNA MESA.",
       tableNotFound: "No se encontró la mesa — puede que haya cerrado. Revisá el código o pedí uno nuevo.",
       netTimeout: "No se pudo llegar a la mesa — alguna red puede estar bloqueando la conexión. Probá de nuevo o cambiá de red.",
+      faceDownCard: "carta boca abajo", playCard: (c) => `Jugar el ${c}`,
       relayNeeded: "Las dos redes no se pueden alcanzar directamente — pasa seguido con datos móviles. Probá de nuevo con alguno en wifi.",
       brokerFail: "No se pudo contactar el servidor de mesas — revisá tu conexión y probá de nuevo.",
       tableFull: "Esa mesa está llena o ya en juego. Revisá el código o pedí uno nuevo.",
@@ -626,18 +628,47 @@
 
   /* ---------- rendering (shared) ---------- */
 
+  /* "1 espadas" — the way the rules ladder and every Truco player names a
+     card. Suits stay Spanish in both languages because that's what's printed
+     on a baraja española. */
+  function cardLabel(card) {
+    return card ? `${card.rank} ${card.suit}` : t("faceDownCard");
+  }
+
   function makeCardEl(card, facedown) {
     const div = document.createElement("div");
     div.className = "card" + (facedown ? " facedown" : "");
+    /* The art is decorative: a pile of <path>s tells a screen reader nothing,
+       so the wrapper carries the name and the SVG is hidden from the tree. */
+    div.setAttribute("role", "img");
+    div.setAttribute("aria-label", cardLabel(facedown ? null : card));
     const face = document.createElement("div");
     face.className = "face";
+    face.setAttribute("aria-hidden", "true");
     face.innerHTML = card ? Cards.cardSVG(card.suit, card.rank) : Cards.cardBackSVG();
     const back = document.createElement("div");
     back.className = "back";
+    back.setAttribute("aria-hidden", "true");
     back.innerHTML = Cards.cardBackSVG();
     div.appendChild(face);
     div.appendChild(back);
     return div;
+  }
+
+  /* A card you can play is a control, not a picture — it needs a name that
+     says what happens, and it has to work from a keyboard and from VoiceOver's
+     activate gesture, not just a tap. */
+  function makeCardPlayable(el, card, onPlay) {
+    el.classList.add("playable");
+    el.setAttribute("role", "button");
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("aria-label", t("playCard", cardLabel(card)));
+    el.addEventListener("click", onPlay);
+    el.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      onPlay();
+    });
   }
 
   function msg(text) { el.dockMsg.textContent = text; }
@@ -725,8 +756,7 @@
       const c = makeCardEl(faceUp ? card : null, false);
       if (deal) { c.classList.add("dealt-in"); c.style.animationDelay = `${i * 0.12}s`; }
       if (canPlay) {
-        c.classList.add("playable");
-        c.addEventListener("click", () => localPlay(i, seat));
+        makeCardPlayable(c, card, () => localPlay(i, seat));
       } else {
         c.classList.add("disabled");
       }
@@ -1102,8 +1132,7 @@
         if (deal) { c.classList.add("dealt-in"); c.style.animationDelay = `${i * 0.12}s`; }
         if (mine) {
           if (canPlay) {
-            c.classList.add("playable");
-            c.addEventListener("click", () => localPlay4(i));
+            makeCardPlayable(c, card, () => localPlay4(i));
           } else {
             c.classList.add("disabled");
           }

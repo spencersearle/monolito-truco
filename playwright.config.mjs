@@ -29,7 +29,7 @@ export default defineConfig({
     {
       name: 'phone-webkit',
       use: { ...devices['iPhone 12'] },
-      testMatch: /(reachable|rules-and-settings)\.spec\.mjs/,
+      testMatch: /(reachable|rules-and-settings|accessible)\.spec\.mjs/,
     },
     /* The peer-to-peer test runs on Chromium, whose headless WebRTC actually
        completes a connection; Playwright's WebKit build can't be relied on for

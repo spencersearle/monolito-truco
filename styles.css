@@ -959,6 +959,14 @@ body {
 
 .card.playable { cursor: pointer; }
 
+/* A playable card is a button, so keyboard focus has to be visible on it.
+   :focus-visible keeps the ring away from taps and mouse clicks. */
+.card.playable:focus-visible {
+  outline: 3px solid var(--gold-bright);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
 @media (hover: hover) {
   .card.playable:hover {
     transform: translateY(-22px) rotateX(8deg) scale(1.06);
