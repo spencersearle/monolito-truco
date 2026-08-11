@@ -215,7 +215,7 @@
       rivalBack: "Your rival is back — play on",
       atTableMove: "You're at the table — your move",
       atTablePlays: "You're at the table — the hand plays on",
-      shareText: "Join my Truco table — first to 30:",
+      shareText: (code) => `Join my Truco table (code ${code}) — first to 30:`,
       // chat system lines
       chatJoined: (n) => `${n} joined the table`,
       chatLeft: (n) => `${n} left the table`,
@@ -356,7 +356,7 @@
       rivalBack: "Tu rival volvió — se sigue jugando",
       atTableMove: "Estás en la mesa — tu jugada",
       atTablePlays: "Estás en la mesa — la mano sigue",
-      shareText: "Sumate a mi mesa de Truco — primero a 30:",
+      shareText: (code) => `Sumate a mi mesa de Truco (código ${code}) — primero a 30:`,
       chatJoined: (n) => `${n} se sentó a la mesa`,
       chatLeft: (n) => `${n} dejó la mesa`,
       chatTakesOver: (a, b) => `${a} reemplaza a ${b}`,
@@ -397,6 +397,28 @@
     const v = (T[lang] && T[lang][key] != null) ? T[lang][key] : T.en[key];
     if (v == null) return key;
     return typeof v === "function" ? v(...args) : v;
+  }
+
+  /* Where an invite link should point. Inside the native shell location.origin
+     is the phone's own WebView — capacitor://localhost on iOS, http://localhost
+     on Android — so a link built from it means nothing on anyone else's device.
+     Hand out the public build instead: the friend opens the game in a browser,
+     the code prefills, and PeerJS connects them straight to this table (the
+     broker doesn't care what origin either side came from).
+
+     On the web, location wins, so a self-hosted copy or a dev server keeps
+     inviting people to itself. */
+  const WEB_HOME = "https://spencersearle.github.io/monolito-truco/";
+
+  function nativeShell() {
+    const cap = window.Capacitor;
+    return !!(cap && cap.isNativePlatform && cap.isNativePlatform()) ||
+      location.protocol === "capacitor:" || location.protocol === "file:";
+  }
+
+  function inviteUrl(code, mode) {
+    const base = nativeShell() ? WEB_HOME : location.origin + location.pathname;
+    return base + (mode === "2v2" ? "#join4=" : "#join=") + code;
   }
 
   /* the table code for the game in progress (online only), so players can
@@ -1442,7 +1464,7 @@
       onReady: (code) => {
         room.code = code;
         myTableCode = code;
-        const url = location.origin + location.pathname + "#join4=" + code;
+        const url = inviteUrl(code, "2v2");
         showLobbyHost(url, code);
       },
       onPeerJoin: (id) => markPeerSeen(id),
@@ -2312,7 +2334,7 @@
     if (code) el.onlineCode.textContent = code.toUpperCase();
     if (link) {
       el.onlineLink.value = link;
-      el.btnShareLink.classList.toggle("hidden", !navigator.share);
+      el.btnShareLink.classList.toggle("hidden", !NativeShare.available());
     }
     el.onlineOverlay.classList.remove("hidden");
   }
@@ -2505,7 +2527,7 @@
     Net.host({
       onReady: (code) => {
         myTableCode = code;
-        const url = location.origin + location.pathname + "#join=" + code;
+        const url = inviteUrl(code);
         showOverlay(t("tableReady"), t("tableReadyTxt"),
           { code, link: url });
       },
@@ -2638,7 +2660,8 @@
     <p>An uncontested flor scores <strong>3</strong>. If both sides have flor you compare (higher wins, ties to the mano): <strong>Contraflor</strong> raises it to 6 (decline = 4 to the caller), and <strong>Contraflor al Resto</strong> bets the game.</p>
     <h3>Play Online</h3>
     <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table — <strong>1v1</strong> or <strong>2v2</strong> — and shows a short <strong>table code</strong>. Share the code; friends pick <strong>JOIN GAME</strong> and type it in. The cards fly when everyone is seated. There's a table-talk chat, and empty 2v2 seats can be filled with bots.</p>
-    <p><strong>Dropped out?</strong> Just enter the same code again to rejoin — the hand picks up exactly where it left off. (A shareable link still works too.)</p>
+    <p><strong>No app on their phone?</strong> Use <strong>SHARE</strong> or <strong>COPY A LINK</strong> instead of the code. The link opens the game in any browser with the code already filled in, so a friend can sit down at your table without installing anything.</p>
+    <p><strong>Dropped out?</strong> Just enter the same code again to rejoin — the hand picks up exactly where it left off.</p>
     <h3>2v2 Team Rules</h3>
     <p>Seats alternate teams; your partner sits across the table. The highest card wins the trick for its <strong>team</strong> — if the top cards split between teams it's a parda. Envido is declared from the mano around the table (ties favor whoever is closer to mano), and either member of a team may answer the other side's calls. Folding concedes for your whole team.</p>`,
     es: `
@@ -2661,7 +2684,8 @@
     <p>La flor sin rival vale <strong>3</strong>. Si los dos tienen flor se compara (gana la más alta, los empates a la mano): <strong>Contraflor</strong> la sube a 6 (si no se quiere, 4 para el que cantó), y <strong>Contraflor al Resto</strong> apuesta el chico.</p>
     <h3>Jugar online</h3>
     <p>Desde la portada, <strong>JUGAR ONLINE</strong> abre una mesa privada — <strong>1v1</strong> o <strong>2v2</strong> — y muestra un <strong>código de mesa</strong> corto. Compartí el código; tus amigos eligen <strong>ENTRAR</strong> y lo escriben. Las cartas vuelan cuando están todos sentados. Hay charla de mesa, y los asientos 2v2 vacíos se pueden llenar con bots.</p>
-    <p><strong>¿Te desconectaste?</strong> Volvé a ingresar el mismo código para reincorporarte — la mano sigue justo donde la dejaste. (El enlace para compartir también sirve.)</p>
+    <p><strong>¿No tiene la app?</strong> Usá <strong>COMPARTIR</strong> o <strong>COPIAR UN ENLACE</strong> en vez del código. El enlace abre el juego en cualquier navegador con el código ya cargado, así tu amigo se sienta a tu mesa sin instalar nada.</p>
+    <p><strong>¿Te desconectaste?</strong> Volvé a ingresar el mismo código para reincorporarte — la mano sigue justo donde la dejaste.</p>
     <h3>Reglas 2v2 (en equipo)</h3>
     <p>Los asientos alternan equipos; tu compañero se sienta enfrente. La carta más alta gana la baza para su <strong>equipo</strong> — si las cartas más altas se reparten entre equipos, es parda. El envido se declara desde la mano alrededor de la mesa (los empates favorecen al más cercano a la mano), y cualquiera del equipo puede responder los cantos del otro lado. Irse al mazo entrega por todo tu equipo.</p>`,
   };
@@ -2889,12 +2913,21 @@
     setTimeout(() => { el.btnCopyLink.textContent = t("orCopyLink"); }, 1600);
   });
 
-  el.btnShareLink.addEventListener("click", () => {
-    navigator.share({
+  /* The share sheet carries the code as well as the link: the code is the
+     primary way in, and it survives a link that a chat app mangles. If no
+     sheet opened — dismissed, or a shell without one — copy instead, so the
+     button always does something the player can see. */
+  el.btnShareLink.addEventListener("click", async () => {
+    const code = (myTableCode || el.onlineCode.textContent || "").toUpperCase();
+    const shared = await NativeShare.share({
       title: "MONOLITO · Truco Argentino",
-      text: t("shareText"),
+      text: t("shareText", code),
       url: el.onlineLink.value,
-    }).catch(() => {});
+    });
+    if (shared) return;
+    await copyText(el.onlineLink.value);
+    el.btnShareLink.textContent = t("copied");
+    setTimeout(() => { el.btnShareLink.textContent = t("share"); }, 1600);
   });
 
   el.btnRules.addEventListener("click", () => el.rulesOverlay.classList.remove("hidden"));

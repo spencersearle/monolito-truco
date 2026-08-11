@@ -22,6 +22,7 @@ const CORE_ASSETS = [
   './haptics.js',
   './moderation.js',
   './nativeback.js',
+  './share.js',
   './ui.js',
   './manifest.webmanifest',
   './icon-192.png',
