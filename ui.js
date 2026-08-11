@@ -23,7 +23,7 @@
     onlineOverlay: $("online-overlay"), onlineTitle: $("online-title"),
     onlineStatus: $("online-status"), onlineLinkbox: $("online-linkbox"),
     onlineLink: $("online-link"), btnCopyLink: $("btn-copy-link"),
-    btnShareLink: $("btn-share-link"), onlineHint: $("online-hint"),
+    btnShareLink: $("btn-share-link"),
     btnOnlineCancel: $("btn-online-cancel"),
     onlineCodebox: $("online-codebox"), onlineCode: $("online-code"), btnCopyCode: $("btn-copy-code"),
     onlineNamebox: $("online-namebox"), onlineName: $("online-name"),
@@ -203,6 +203,7 @@
       rivalDiscTxt: "Waiting for your rival to rejoin — they can re-enter this code in JOIN GAME.",
       tableNotFound: "Table not found — it may have closed. Double-check the code, or ask for a fresh one.",
       netTimeout: "Couldn't reach the table — a network may be blocking the connection. Try again or switch networks.",
+      relayNeeded: "Your two networks can't reach each other directly — mobile data often does this. Try again with one of you on wifi.",
       brokerFail: "Can't reach the matchmaking server — check your connection and try again.",
       tableFull: "That table is full or already in play. Double-check the code, or ask for a new one.",
       noNet: "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.",
@@ -345,6 +346,7 @@
       rivalDiscTxt: "Esperando que tu rival vuelva — puede reingresar este código en ENTRAR A UNA MESA.",
       tableNotFound: "No se encontró la mesa — puede que haya cerrado. Revisá el código o pedí uno nuevo.",
       netTimeout: "No se pudo llegar a la mesa — alguna red puede estar bloqueando la conexión. Probá de nuevo o cambiá de red.",
+      relayNeeded: "Las dos redes no se pueden alcanzar directamente — pasa seguido con datos móviles. Probá de nuevo con alguno en wifi.",
       brokerFail: "No se pudo contactar el servidor de mesas — revisá tu conexión y probá de nuevo.",
       tableFull: "Esa mesa está llena o ya en juego. Revisá el código o pedí uno nuevo.",
       noNet: "No se pudo cargar el juego online (el script de PeerJS no responde). Revisá tu conexión y recargá la página.",
@@ -1748,6 +1750,9 @@
     if (kind === "peer-unavailable") {
       room = null;
       lobbyFailed(t("tableNotFound"));
+    } else if (kind === "ice-failed") {
+      room = null;
+      lobbyFailed(e && e.relay ? t("netTimeout") : t("relayNeeded"));
     } else if (kind === "timeout") {
       room = null;
       lobbyFailed(t("netTimeout"));
@@ -2316,7 +2321,7 @@
 
   /* ---------- online overlay ---------- */
 
-  function showOverlay(title, status, { link = null, code = null, hint = false, cancelLabel = null } = {}) {
+  function showOverlay(title, status, { link = null, code = null, cancelLabel = null } = {}) {
     el.onlineTitle.textContent = title;
     el.onlineStatus.textContent = status;
     el.onlineNamebox.classList.add("hidden");
@@ -2331,7 +2336,6 @@
     el.btnLobbyName.classList.add("hidden");
     el.onlineCodebox.classList.toggle("hidden", !code);
     el.onlineLinkbox.classList.toggle("hidden", !link);
-    el.onlineHint.classList.toggle("hidden", !hint);
     el.btnOnlineCancel.textContent = cancelLabel || t("cancel");
     el.btnCopyLink.textContent = t("orCopyLink");
     el.btnCopyCode.textContent = t("copy");
@@ -2377,6 +2381,9 @@
       // host is gone (guest can't reach the table) — couldn't (re)join
       if (net || game) { net = null; game = null; }
       lobbyFailed(t("tableNotFound"));
+    } else if (kind === "ice-failed") {
+      if (net || game) { net = null; game = null; }
+      lobbyFailed(e && e.relay ? t("netTimeout") : t("relayNeeded"));
     } else if (kind === "timeout") {
       lobbyFailed(t("netTimeout"));
     } else if (net && net.role === "host" && game) {

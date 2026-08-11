@@ -571,12 +571,6 @@ body {
 
 .online-linkbtns .btn { margin: 0; }
 
-.online-hint {
-  color: var(--ice);
-  font-size: .95rem;
-  line-height: 1.5;
-}
-
 /* name entry + mode choice */
 
 .online-namebox {
@@ -1697,7 +1691,6 @@ body {
   .online-status { font-size: .9rem; }
   .online-link { font-size: .76rem; padding: 10px 10px; }
   .online-linkbtns .btn { width: min(260px, 82vw); }
-  .online-hint { font-size: .84rem; }
   .online-modes .btn { min-width: 0; width: min(260px, 82vw); }
   .online-code { font-size: 1.3rem; letter-spacing: .26em; text-indent: .26em; padding: 10px 8px; }
   .online-codehint { font-size: .78rem; }
