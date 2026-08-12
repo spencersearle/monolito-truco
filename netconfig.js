@@ -53,8 +53,18 @@ const NetConfig = (() => {
   const TURN_SERVERS = [];
 
   /* Or an endpoint returning { iceServers: [...] } with short-lived
-     credentials. Preferred for Cloudflare Realtime, whose API token must
-     not ship in a static app — put a tiny Worker in front of it. */
+     credentials. This is the one to use: worker/ in this repo is a Cloudflare
+     Worker that mints them, so the Realtime API token stays on Cloudflare
+     instead of shipping inside a static app anyone can read.
+
+     THE ONE LINE TO CHANGE once that Worker is deployed:
+
+       const TURN_CREDENTIALS_URL = "https://monolito-turn.<subdomain>.workers.dev/turn";
+
+     Until then this stays null and the game is STUN-only, which is where it
+     has always been — some pairs of players behind mobile NAT will not
+     connect, and net.js tells them so rather than blaming their wifi.
+     See worker/README.md for the four commands. */
   const TURN_CREDENTIALS_URL = null;
 
   const FETCH_TIMEOUT = 4000;

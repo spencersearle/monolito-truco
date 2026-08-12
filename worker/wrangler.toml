@@ -1,0 +1,16 @@
+# Cloudflare Worker that mints short-lived TURN credentials for Monolito.
+#
+# The two secrets are NOT in this file and must never be. Set them once with:
+#   npx wrangler secret put TURN_KEY_ID
+#   npx wrangler secret put TURN_KEY_API_TOKEN
+
+name = "monolito-turn"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# The Worker is a few milliseconds of work per call and the result is cached,
+# so the free plan is far more than enough.
+workers_dev = true
+
+[observability]
+enabled = true

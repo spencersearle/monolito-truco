@@ -6,7 +6,7 @@
   "scripts": {
     "build:web": "node scripts/build-web.mjs",
     "sync": "npm run build:web && cap sync",
-    "test": "node test_engine.js && node test_engine4.js && node test_moderation.js",
+    "test": "node test_engine.js && node test_engine4.js && node test_moderation.js && node worker/test_worker.mjs",
     "test:sim": "node test_multiplayer_sim.js && node test_multiplayer_sim4.js",
     "test:ui": "playwright test",
     "test:all": "npm test && npm run test:sim && npm run test:ui"

@@ -1,0 +1,12 @@
+{
+  "name": "monolito-turn-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mints short-lived Cloudflare TURN credentials for Monolito, so the API token never ships in the app",
+  "scripts": {
+    "test": "node test_worker.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  }
+}
