@@ -23,13 +23,14 @@
     onlineOverlay: $("online-overlay"), onlineTitle: $("online-title"),
     onlineStatus: $("online-status"), onlineLinkbox: $("online-linkbox"),
     onlineLink: $("online-link"), btnCopyLink: $("btn-copy-link"),
-    btnShareLink: $("btn-share-link"), onlineHint: $("online-hint"),
+    btnShareLink: $("btn-share-link"),
     btnOnlineCancel: $("btn-online-cancel"),
     onlineCodebox: $("online-codebox"), onlineCode: $("online-code"), btnCopyCode: $("btn-copy-code"),
     onlineNamebox: $("online-namebox"), onlineName: $("online-name"),
     onlineModes: $("online-modes"), btnMode1v1: $("btn-mode-1v1"), btnMode2v2: $("btn-mode-2v2"),
     btnJoinGame: $("btn-join-game"), onlineJoinbox: $("online-joinbox"),
     joinCode: $("join-code"), btnJoinGo: $("btn-join-go"),
+    btnOpenApp: $("btn-open-app"),
     lobbyRoster: $("lobby-roster"), btnStart2v2: $("btn-start-2v2"),
     btnJoin2v2: $("btn-join-2v2"), btnLobbyChat: $("btn-lobby-chat"),
     lobbyChatBadge: $("lobby-chat-badge"), btnLobbyName: $("btn-lobby-name"),
@@ -112,10 +113,11 @@
       soloHint: "Pass & play hands one device back and forth between two players.",
       passSub: "Pass the device over — your cards are hidden until you tap.",
       ready: "I'M READY",
-      florToggle: (on) => `FLOR: ${on ? "ON" : "OFF"}`,
+      florToggle: (on) => `FLOR (1v1): ${on ? "ON" : "OFF"}`,
       // online chrome
       yourName: "YOUR NAME", tableCode: "TABLE CODE", copy: "COPY", copied: "COPIED ✓",
       orCopyLink: "OR COPY A LINK", share: "SHARE…", startGame: "START GAME",
+      openInApp: "↗ OPEN IN THE APP",
       joinTable: "JOIN TABLE", cancel: "CANCEL", editName: "✎ EDIT NAME",
       tableTalkBtn: "💬 TABLE TALK", save: "SAVE", tableTalk: "TABLE TALK",
       sayThis: "Say something…", playerPH: "Player",
@@ -201,6 +203,8 @@
       rivalDiscTxt: "Waiting for your rival to rejoin — they can re-enter this code in JOIN GAME.",
       tableNotFound: "Table not found — it may have closed. Double-check the code, or ask for a fresh one.",
       netTimeout: "Couldn't reach the table — a network may be blocking the connection. Try again or switch networks.",
+      faceDownCard: "face-down card", playCard: (c) => `Play the ${c}`,
+      relayNeeded: "Your two networks can't reach each other directly — mobile data often does this. Try again with one of you on wifi.",
       brokerFail: "Can't reach the matchmaking server — check your connection and try again.",
       tableFull: "That table is full or already in play. Double-check the code, or ask for a new one.",
       noNet: "Online play couldn't load (the PeerJS script is unreachable). Check your connection and reload the page.",
@@ -215,7 +219,7 @@
       rivalBack: "Your rival is back — play on",
       atTableMove: "You're at the table — your move",
       atTablePlays: "You're at the table — the hand plays on",
-      shareText: "Join my Truco table — first to 30:",
+      shareText: (code) => `Join my Truco table (code ${code}) — first to 30:`,
       // chat system lines
       chatJoined: (n) => `${n} joined the table`,
       chatLeft: (n) => `${n} left the table`,
@@ -262,9 +266,10 @@
       soloHint: "Pasar y jugar: un solo dispositivo que va y viene entre dos jugadores.",
       passSub: "Pasá el dispositivo — tus cartas quedan ocultas hasta que toques.",
       ready: "LISTO",
-      florToggle: (on) => `CON FLOR: ${on ? "SÍ" : "NO"}`,
+      florToggle: (on) => `CON FLOR (1v1): ${on ? "SÍ" : "NO"}`,
       yourName: "TU NOMBRE", tableCode: "CÓDIGO DE MESA", copy: "COPIAR", copied: "COPIADO ✓",
       orCopyLink: "O COPIAR UN ENLACE", share: "COMPARTIR…", startGame: "EMPEZAR",
+      openInApp: "↗ ABRIR EN LA APP",
       joinTable: "ENTRAR", cancel: "CANCELAR", editName: "✎ CAMBIAR NOMBRE",
       tableTalkBtn: "💬 CHARLA", save: "GUARDAR", tableTalk: "CHARLA DE MESA",
       sayThis: "Decí algo…", playerPH: "Jugador",
@@ -342,6 +347,8 @@
       rivalDiscTxt: "Esperando que tu rival vuelva — puede reingresar este código en ENTRAR A UNA MESA.",
       tableNotFound: "No se encontró la mesa — puede que haya cerrado. Revisá el código o pedí uno nuevo.",
       netTimeout: "No se pudo llegar a la mesa — alguna red puede estar bloqueando la conexión. Probá de nuevo o cambiá de red.",
+      faceDownCard: "carta boca abajo", playCard: (c) => `Jugar el ${c}`,
+      relayNeeded: "Las dos redes no se pueden alcanzar directamente — pasa seguido con datos móviles. Probá de nuevo con alguno en wifi.",
       brokerFail: "No se pudo contactar el servidor de mesas — revisá tu conexión y probá de nuevo.",
       tableFull: "Esa mesa está llena o ya en juego. Revisá el código o pedí uno nuevo.",
       noNet: "No se pudo cargar el juego online (el script de PeerJS no responde). Revisá tu conexión y recargá la página.",
@@ -356,7 +363,7 @@
       rivalBack: "Tu rival volvió — se sigue jugando",
       atTableMove: "Estás en la mesa — tu jugada",
       atTablePlays: "Estás en la mesa — la mano sigue",
-      shareText: "Sumate a mi mesa de Truco — primero a 30:",
+      shareText: (code) => `Sumate a mi mesa de Truco (código ${code}) — primero a 30:`,
       chatJoined: (n) => `${n} se sentó a la mesa`,
       chatLeft: (n) => `${n} dejó la mesa`,
       chatTakesOver: (a, b) => `${a} reemplaza a ${b}`,
@@ -399,6 +406,28 @@
     return typeof v === "function" ? v(...args) : v;
   }
 
+  /* Where an invite link should point. Inside the native shell location.origin
+     is the phone's own WebView — capacitor://localhost on iOS, http://localhost
+     on Android — so a link built from it means nothing on anyone else's device.
+     Hand out the public build instead: the friend opens the game in a browser,
+     the code prefills, and PeerJS connects them straight to this table (the
+     broker doesn't care what origin either side came from).
+
+     On the web, location wins, so a self-hosted copy or a dev server keeps
+     inviting people to itself. */
+  const WEB_HOME = "https://spencersearle.github.io/monolito-truco/";
+
+  function nativeShell() {
+    const cap = window.Capacitor;
+    return !!(cap && cap.isNativePlatform && cap.isNativePlatform()) ||
+      location.protocol === "capacitor:" || location.protocol === "file:";
+  }
+
+  function inviteUrl(code, mode) {
+    const base = nativeShell() ? WEB_HOME : location.origin + location.pathname;
+    return base + (mode === "2v2" ? "#join4=" : "#join=") + code;
+  }
+
   /* the table code for the game in progress (online only), so players can
      share it or rejoin without leaving the table */
   function activeCode() {
@@ -424,7 +453,7 @@
   let local2 = false;          // solo: pass-and-play (two humans hot-seat on one device)
   let controller = "you";      // local2: which seat's cards are revealed/playable right now
   let botName = "El Monolito"; // solo vs bot: the AI opponent's name this game
-  let florOn = localStorage.getItem("monolito-flor") === "1"; // optional "con flor" variant (1v1/solo)
+  let florOn = localStorage.getItem("monolito-flor") !== "0"; // "con flor" variant (1v1/solo), on unless turned off
   let rivalName = null;        // 1v1 online rival's name
   let pendingDeal = null;      // 1v1 guest: next hand received mid-animation
   let rivalGone = false;       // 1v1 host: rival dropped, paused waiting for rejoin
@@ -599,18 +628,47 @@
 
   /* ---------- rendering (shared) ---------- */
 
+  /* "1 espadas" — the way the rules ladder and every Truco player names a
+     card. Suits stay Spanish in both languages because that's what's printed
+     on a baraja española. */
+  function cardLabel(card) {
+    return card ? `${card.rank} ${card.suit}` : t("faceDownCard");
+  }
+
   function makeCardEl(card, facedown) {
     const div = document.createElement("div");
     div.className = "card" + (facedown ? " facedown" : "");
+    /* The art is decorative: a pile of <path>s tells a screen reader nothing,
+       so the wrapper carries the name and the SVG is hidden from the tree. */
+    div.setAttribute("role", "img");
+    div.setAttribute("aria-label", cardLabel(facedown ? null : card));
     const face = document.createElement("div");
     face.className = "face";
+    face.setAttribute("aria-hidden", "true");
     face.innerHTML = card ? Cards.cardSVG(card.suit, card.rank) : Cards.cardBackSVG();
     const back = document.createElement("div");
     back.className = "back";
+    back.setAttribute("aria-hidden", "true");
     back.innerHTML = Cards.cardBackSVG();
     div.appendChild(face);
     div.appendChild(back);
     return div;
+  }
+
+  /* A card you can play is a control, not a picture — it needs a name that
+     says what happens, and it has to work from a keyboard and from VoiceOver's
+     activate gesture, not just a tap. */
+  function makeCardPlayable(el, card, onPlay) {
+    el.classList.add("playable");
+    el.setAttribute("role", "button");
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("aria-label", t("playCard", cardLabel(card)));
+    el.addEventListener("click", onPlay);
+    el.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      onPlay();
+    });
   }
 
   function msg(text) { el.dockMsg.textContent = text; }
@@ -698,8 +756,7 @@
       const c = makeCardEl(faceUp ? card : null, false);
       if (deal) { c.classList.add("dealt-in"); c.style.animationDelay = `${i * 0.12}s`; }
       if (canPlay) {
-        c.classList.add("playable");
-        c.addEventListener("click", () => localPlay(i, seat));
+        makeCardPlayable(c, card, () => localPlay(i, seat));
       } else {
         c.classList.add("disabled");
       }
@@ -1075,8 +1132,7 @@
         if (deal) { c.classList.add("dealt-in"); c.style.animationDelay = `${i * 0.12}s`; }
         if (mine) {
           if (canPlay) {
-            c.classList.add("playable");
-            c.addEventListener("click", () => localPlay4(i));
+            makeCardPlayable(c, card, () => localPlay4(i));
           } else {
             c.classList.add("disabled");
           }
@@ -1442,7 +1498,7 @@
       onReady: (code) => {
         room.code = code;
         myTableCode = code;
-        const url = location.origin + location.pathname + "#join4=" + code;
+        const url = inviteUrl(code, "2v2");
         showLobbyHost(url, code);
       },
       onPeerJoin: (id) => markPeerSeen(id),
@@ -1723,6 +1779,9 @@
     if (kind === "peer-unavailable") {
       room = null;
       lobbyFailed(t("tableNotFound"));
+    } else if (kind === "ice-failed") {
+      room = null;
+      lobbyFailed(e && e.relay ? t("netTimeout") : t("relayNeeded"));
     } else if (kind === "timeout") {
       room = null;
       lobbyFailed(t("netTimeout"));
@@ -2291,13 +2350,14 @@
 
   /* ---------- online overlay ---------- */
 
-  function showOverlay(title, status, { link = null, code = null, hint = false, cancelLabel = null } = {}) {
+  function showOverlay(title, status, { link = null, code = null, cancelLabel = null } = {}) {
     el.onlineTitle.textContent = title;
     el.onlineStatus.textContent = status;
     el.onlineNamebox.classList.add("hidden");
     el.onlineModes.classList.add("hidden");
     el.onlineJoinbox.classList.add("hidden");
     el.btnJoinGo.classList.add("hidden");
+    el.btnOpenApp.classList.add("hidden");
     el.lobbyRoster.classList.add("hidden");
     el.btnStart2v2.classList.add("hidden");
     el.btnJoin2v2.classList.add("hidden");
@@ -2305,14 +2365,13 @@
     el.btnLobbyName.classList.add("hidden");
     el.onlineCodebox.classList.toggle("hidden", !code);
     el.onlineLinkbox.classList.toggle("hidden", !link);
-    el.onlineHint.classList.toggle("hidden", !hint);
     el.btnOnlineCancel.textContent = cancelLabel || t("cancel");
     el.btnCopyLink.textContent = t("orCopyLink");
     el.btnCopyCode.textContent = t("copy");
     if (code) el.onlineCode.textContent = code.toUpperCase();
     if (link) {
       el.onlineLink.value = link;
-      el.btnShareLink.classList.toggle("hidden", !navigator.share);
+      el.btnShareLink.classList.toggle("hidden", !NativeShare.available());
     }
     el.onlineOverlay.classList.remove("hidden");
   }
@@ -2351,6 +2410,9 @@
       // host is gone (guest can't reach the table) — couldn't (re)join
       if (net || game) { net = null; game = null; }
       lobbyFailed(t("tableNotFound"));
+    } else if (kind === "ice-failed") {
+      if (net || game) { net = null; game = null; }
+      lobbyFailed(e && e.relay ? t("netTimeout") : t("relayNeeded"));
     } else if (kind === "timeout") {
       lobbyFailed(t("netTimeout"));
     } else if (net && net.role === "host" && game) {
@@ -2505,7 +2567,7 @@
     Net.host({
       onReady: (code) => {
         myTableCode = code;
-        const url = location.origin + location.pathname + "#join=" + code;
+        const url = inviteUrl(code);
         showOverlay(t("tableReady"), t("tableReadyTxt"),
           { code, link: url });
       },
@@ -2559,16 +2621,75 @@
     el.onlineNamebox.classList.remove("hidden");
     el.onlineJoinbox.classList.remove("hidden");
     el.btnJoinGo.classList.remove("hidden");
+    /* In a browser, offer to hand the table to the installed app. Nothing
+       happens if it isn't installed — this page is the fallback, and it plays
+       the game perfectly well on its own. */
+    el.btnOpenApp.classList.toggle("hidden", nativeShell());
+    el.btnOpenApp.dataset.code = code;
   }
 
   /* ---------- rules overlay ---------- */
+
+  /* The card ladder: one face per power tier, strongest first. The tiers and
+     their order come from the engine (Truco.power over the whole deck), so the
+     picture can never drift from the rules the game actually enforces — these
+     two maps only decide which card stands for a tier and what to call it. */
+  const LADDER_FACE = {
+    14: { suit: "espadas", rank: 1 },  13: { suit: "bastos", rank: 1 },
+    12: { suit: "espadas", rank: 7 },  11: { suit: "oros", rank: 7 },
+    10: { suit: "espadas", rank: 3 },   9: { suit: "espadas", rank: 2 },
+     8: { suit: "copas", rank: 1 },     7: { suit: "espadas", rank: 12 },
+     6: { suit: "espadas", rank: 11 },  5: { suit: "espadas", rank: 10 },
+     4: { suit: "copas", rank: 7 },     3: { suit: "espadas", rank: 6 },
+     2: { suit: "espadas", rank: 5 },   1: { suit: "espadas", rank: 4 },
+  };
+
+  const LADDER_CAPTION = {
+    en: {
+      14: "1 espadas", 13: "1 bastos", 12: "7 espadas", 11: "7 oros",
+      10: "the 3s", 9: "the 2s", 8: "1 copas / oros", 7: "the 12s",
+      6: "the 11s", 5: "the 10s", 4: "7 copas / bastos", 3: "the 6s",
+      2: "the 5s", 1: "the 4s",
+    },
+    es: {
+      14: "1 de espadas", 13: "1 de bastos", 12: "7 de espadas", 11: "7 de oros",
+      10: "los 3", 9: "los 2", 8: "1 de copas / oros", 7: "los 12",
+      6: "los 11", 5: "los 10", 4: "7 de copas / bastos", 3: "los 6",
+      2: "los 5", 1: "los 4",
+    },
+  };
+
+  function cardLadderHTML(lang) {
+    const caption = LADDER_CAPTION[lang] || LADDER_CAPTION.en;
+    const ranks = Object.keys(Cards.RANK_LABEL).map(Number);
+
+    const tiers = new Map();                       // power -> cards at that power
+    for (const suit of Cards.SUITS) {
+      for (const rank of ranks) {
+        const p = Truco.power({ suit, rank });
+        if (!tiers.has(p)) tiers.set(p, []);
+        tiers.get(p).push({ suit, rank });
+      }
+    }
+
+    return [...tiers.keys()].sort((a, b) => b - a).map((p, i) => {
+      const face = LADDER_FACE[p] || tiers.get(p)[0];
+      const label = caption[p] ||
+        `${Cards.RANK_LABEL[face.rank]} ${Cards.SUIT_LABEL[face.suit]}`;
+      return `<figure class="ladder-card">
+        <span class="ladder-rank">${i + 1}</span>
+        ${Cards.cardSVG(face.suit, face.rank)}
+        <figcaption>${label}</figcaption>
+      </figure>`;
+    }).join("");
+  }
 
   const RULES_HTML = {
     en: `
     <h3>The Goal</h3>
     <p>First to <strong>30 points</strong>. Each hand you get 3 cards and play up to 3 tricks — win <strong>2 of 3 tricks</strong> to take the hand.</p>
     <h3>Card Power (high → low)</h3>
-    <p><strong>1 espadas</strong> · <strong>1 bastos</strong> · <strong>7 espadas</strong> · <strong>7 oros</strong> · 3s · 2s · 1 copas/oros · 12s · 11s · 10s · 7 copas/bastos · 6s · 5s · 4s</p>
+    <div class="card-ladder" id="card-ladder"></div>
     <p><em>Suit doesn't matter otherwise — equal cards tie (parda), and ties favor whoever won the earliest trick, or the mano.</em></p>
     <h3>Envido</h3>
     <p>Called in the first trick, before you play your first card. Two cards of the same suit are worth their sum <strong>+ 20</strong> (face cards count 0). Best possible: 33.</p>
@@ -2584,14 +2705,15 @@
     <p>An uncontested flor scores <strong>3</strong>. If both sides have flor you compare (higher wins, ties to the mano): <strong>Contraflor</strong> raises it to 6 (decline = 4 to the caller), and <strong>Contraflor al Resto</strong> bets the game.</p>
     <h3>Play Online</h3>
     <p>From the title screen, <strong>PLAY ONLINE</strong> opens a private table — <strong>1v1</strong> or <strong>2v2</strong> — and shows a short <strong>table code</strong>. Share the code; friends pick <strong>JOIN GAME</strong> and type it in. The cards fly when everyone is seated. There's a table-talk chat, and empty 2v2 seats can be filled with bots.</p>
-    <p><strong>Dropped out?</strong> Just enter the same code again to rejoin — the hand picks up exactly where it left off. (A shareable link still works too.)</p>
+    <p><strong>Sharing a table.</strong> Use <strong>SHARE</strong> or <strong>COPY A LINK</strong> instead of the code. The link opens the game in any browser with the code already filled in, so a friend can sit down at your table without installing anything — and if they do have the app, that page offers to hand the table straight to it.</p>
+    <p><strong>Dropped out?</strong> Just enter the same code again to rejoin — the hand picks up exactly where it left off.</p>
     <h3>2v2 Team Rules</h3>
     <p>Seats alternate teams; your partner sits across the table. The highest card wins the trick for its <strong>team</strong> — if the top cards split between teams it's a parda. Envido is declared from the mano around the table (ties favor whoever is closer to mano), and either member of a team may answer the other side's calls. Folding concedes for your whole team.</p>`,
     es: `
     <h3>El objetivo</h3>
     <p>Primero a <strong>30 puntos</strong>. En cada mano recibís 3 cartas y se juegan hasta 3 bazas — ganá <strong>2 de 3 bazas</strong> para llevarte la mano.</p>
     <h3>Poder de las cartas (mayor → menor)</h3>
-    <p><strong>1 de espadas</strong> · <strong>1 de bastos</strong> · <strong>7 de espadas</strong> · <strong>7 de oros</strong> · los 3 · los 2 · 1 de copas/oros · los 12 · los 11 · los 10 · 7 de copas/bastos · los 6 · los 5 · los 4</p>
+    <div class="card-ladder" id="card-ladder"></div>
     <p><em>Por lo demás el palo no importa — cartas iguales empatan (parda), y los empates favorecen al que ganó la baza más temprana, o a la mano.</em></p>
     <h3>Envido</h3>
     <p>Se canta en la primera baza, antes de jugar tu primera carta. Dos cartas del mismo palo valen su suma <strong>+ 20</strong> (las figuras cuentan 0). El máximo: 33.</p>
@@ -2607,7 +2729,8 @@
     <p>La flor sin rival vale <strong>3</strong>. Si los dos tienen flor se compara (gana la más alta, los empates a la mano): <strong>Contraflor</strong> la sube a 6 (si no se quiere, 4 para el que cantó), y <strong>Contraflor al Resto</strong> apuesta el chico.</p>
     <h3>Jugar online</h3>
     <p>Desde la portada, <strong>JUGAR ONLINE</strong> abre una mesa privada — <strong>1v1</strong> o <strong>2v2</strong> — y muestra un <strong>código de mesa</strong> corto. Compartí el código; tus amigos eligen <strong>ENTRAR</strong> y lo escriben. Las cartas vuelan cuando están todos sentados. Hay charla de mesa, y los asientos 2v2 vacíos se pueden llenar con bots.</p>
-    <p><strong>¿Te desconectaste?</strong> Volvé a ingresar el mismo código para reincorporarte — la mano sigue justo donde la dejaste. (El enlace para compartir también sirve.)</p>
+    <p><strong>Compartir una mesa.</strong> Usá <strong>COMPARTIR</strong> o <strong>COPIAR UN ENLACE</strong> en vez del código. El enlace abre el juego en cualquier navegador con el código ya cargado, así tu amigo se sienta a tu mesa sin instalar nada — y si tiene la app, esa página le ofrece pasarle la mesa directamente.</p>
+    <p><strong>¿Te desconectaste?</strong> Volvé a ingresar el mismo código para reincorporarte — la mano sigue justo donde la dejaste.</p>
     <h3>Reglas 2v2 (en equipo)</h3>
     <p>Los asientos alternan equipos; tu compañero se sienta enfrente. La carta más alta gana la baza para su <strong>equipo</strong> — si las cartas más altas se reparten entre equipos, es parda. El envido se declara desde la mano alrededor de la mesa (los empates favorecen al más cercano a la mano), y cualquiera del equipo puede responder los cantos del otro lado. Irse al mazo entrega por todo tu equipo.</p>`,
   };
@@ -2639,6 +2762,8 @@
     el.rulesOverlay.querySelector("h2").textContent = t("howToPlay");
     el.btnCloseRules.textContent = t("back");
     el.rulesContent.innerHTML = RULES_HTML[lang] || RULES_HTML.en;
+    const ladder = el.rulesContent.querySelector("#card-ladder");
+    if (ladder) ladder.innerHTML = cardLadderHTML(lang);
     // online + name + chat chrome
     for (const lab of document.querySelectorAll('label[for="online-name"], label[for="name-input"]'))
       lab.textContent = t("yourName");
@@ -2650,6 +2775,7 @@
     if (codeHint) codeHint.textContent = t("codeHint");
     el.btnCopyLink.textContent = t("orCopyLink");
     el.btnShareLink.textContent = t("share");
+    el.btnOpenApp.textContent = t("openInApp");
     el.btnJoinGo.textContent = t("joinTable");
     el.btnJoin2v2.textContent = t("joinTable");
     el.btnLobbyName.textContent = t("editName");
@@ -2833,12 +2959,26 @@
     setTimeout(() => { el.btnCopyLink.textContent = t("orCopyLink"); }, 1600);
   });
 
-  el.btnShareLink.addEventListener("click", () => {
-    navigator.share({
+  /* The share sheet carries the code as well as the link: the code is the
+     primary way in, and it survives a link that a chat app mangles. If no
+     sheet opened — dismissed, or a shell without one — copy instead, so the
+     button always does something the player can see. */
+  el.btnShareLink.addEventListener("click", async () => {
+    const code = (myTableCode || el.onlineCode.textContent || "").toUpperCase();
+    const shared = await NativeShare.share({
       title: "MONOLITO · Truco Argentino",
-      text: t("shareText"),
+      text: t("shareText", code),
       url: el.onlineLink.value,
-    }).catch(() => {});
+    });
+    if (shared) return;
+    await copyText(el.onlineLink.value);
+    el.btnShareLink.textContent = t("copied");
+    setTimeout(() => { el.btnShareLink.textContent = t("share"); }, 1600);
+  });
+
+  el.btnOpenApp.addEventListener("click", () => {
+    const code = el.btnOpenApp.dataset.code;
+    if (code) location.href = "monolito://join=" + code;
   });
 
   el.btnRules.addEventListener("click", () => el.rulesOverlay.classList.remove("hidden"));
@@ -2949,4 +3089,19 @@
   const linkMatch = location.hash.match(/^#join4?=([a-z0-9]+)$/i);
   if (linkMatch) openJoinLink(linkMatch[1].toLowerCase());
   else if (location.hash === "#play") el.btnStart.click();
+
+  /* monolito://join=<code> arriving from outside: the invite page in a browser
+     handing the table to the installed app. Same destination as a #join= link,
+     so the friend lands on the name prompt with the code already in. A cold
+     launch reports the URL twice (the event and the launch URL), so only the
+     first one counts. */
+  let lastAppUrlCode = null;
+  NativeBack.onAppUrl((url) => {
+    const m = String(url || "").match(/join4?=([a-z0-9]+)/i);
+    if (!m) return;
+    const code = m[1].toLowerCase();
+    if (code === lastAppUrlCode) return;
+    lastAppUrlCode = code;
+    openJoinLink(code);
+  });
 })();

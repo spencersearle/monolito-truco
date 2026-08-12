@@ -1,12 +1,15 @@
 {
   "name": "monolito-truco",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
-  "description": "Argentine Truco card game — web (PWA) + native iOS/Android via Capacitor",
+  "description": "Argentine Truco card game \u2014 web (PWA) + native iOS/Android via Capacitor",
   "scripts": {
     "build:web": "node scripts/build-web.mjs",
     "sync": "npm run build:web && cap sync",
-    "test": "node test_engine.js && node test_engine4.js && node test_moderation.js"
+    "test": "node test_engine.js && node test_engine4.js && node test_moderation.js && node worker/test_worker.mjs",
+    "test:sim": "node test_multiplayer_sim.js && node test_multiplayer_sim4.js",
+    "test:ui": "playwright test",
+    "test:all": "npm test && npm run test:sim && npm run test:ui"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
@@ -14,6 +17,10 @@
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/haptics": "^8.0.2",
-    "@capacitor/ios": "^8.4.1"
+    "@capacitor/ios": "^8.4.1",
+    "@capacitor/share": "^8.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
   }
 }

@@ -60,9 +60,9 @@
   <div class="grain" aria-hidden="true"></div>
 
   <!-- Language toggle (main screen, bottom-left) -->
-  <button class="lang-toggle" id="lang-toggle" title="English / Español">ES</button>
+  <button class="lang-toggle" id="lang-toggle" title="English / Español" aria-label="English / Español">ES</button>
   <!-- Settings (main screen, bottom-right) -->
-  <button class="lang-toggle settings-toggle" id="settings-toggle" title="Settings">⚙</button>
+  <button class="lang-toggle settings-toggle" id="settings-toggle" title="Settings" aria-label="Settings">⚙</button>
 
   <!-- Title splash -->
   <div class="splash" id="splash">
@@ -86,7 +86,7 @@
       <p class="online-status">A quick game right here on this device.</p>
       <button class="btn btn-gold" id="btn-solo-bot">⚔ &nbsp;PLAY A BOT</button>
       <button class="btn btn-gold" id="btn-solo-local">👥 &nbsp;PASS &amp; PLAY</button>
-      <button class="btn btn-ghost flor-toggle" id="btn-flor-solo">FLOR: OFF</button>
+      <button class="btn btn-ghost flor-toggle" id="btn-flor-solo">FLOR (1v1): ON</button>
       <p class="solo-hint">Pass &amp; play hands one device back and forth between two players.</p>
       <button class="btn btn-ghost" id="btn-solo-cancel">BACK</button>
     </div>
@@ -131,7 +131,7 @@
           Privacy Policy &amp; Terms
         </a>
       </p>
-      <p class="settings-version">MONOLITO · v1.0.0</p>
+      <p class="settings-version">MONOLITO · v1.0.1</p>
       <button class="btn btn-gold" id="btn-close-settings">BACK</button>
     </div>
   </div>
@@ -158,7 +158,7 @@
       <div class="online-modes hidden" id="online-modes">
         <button class="btn btn-gold" id="btn-mode-1v1">1 VS 1</button>
         <button class="btn btn-gold" id="btn-mode-2v2">2 VS 2</button>
-        <button class="btn btn-ghost flor-toggle" id="btn-flor-online">FLOR: OFF</button>
+        <button class="btn btn-ghost flor-toggle" id="btn-flor-online">FLOR (1v1): ON</button>
       </div>
       <div class="online-namebox hidden" id="online-joinbox">
         <label class="online-namelabel" for="join-code">TABLE CODE</label>
@@ -181,9 +181,9 @@
         </div>
       </div>
       <div class="lobby-roster hidden" id="lobby-roster"></div>
-      <p class="online-hint hidden" id="online-hint">Send this link to your rival — the cards fly the moment they open it.</p>
       <button class="btn btn-gold hidden" id="btn-start-2v2" disabled>START GAME</button>
       <button class="btn btn-gold hidden" id="btn-join-go">JOIN TABLE</button>
+      <button class="btn btn-ghost hidden" id="btn-open-app">↗ OPEN IN THE APP</button>
       <button class="btn btn-ghost hidden" id="btn-join-2v2">JOIN TABLE</button>
       <button class="btn btn-ghost btn-badged hidden" id="btn-lobby-chat">💬 TABLE TALK<span class="chat-badge hidden" id="lobby-chat-badge">0</span></button>
       <button class="btn btn-ghost hidden" id="btn-lobby-name">✎ EDIT NAME</button>
@@ -212,8 +212,8 @@
       <div class="hud-actions">
         <button class="exit-btn" id="btn-exit" title="Leave the table">✕ EXIT</button>
         <div class="hud-actions-sub">
-          <button class="chat-toggle name-toggle hidden" id="btn-name" title="Edit your name">✎</button>
-          <button class="chat-toggle hidden" id="btn-chat" title="Chat">💬<span class="chat-badge hidden" id="chat-badge">0</span></button>
+          <button class="chat-toggle name-toggle hidden" id="btn-name" title="Edit your name" aria-label="Edit your name">✎</button>
+          <button class="chat-toggle hidden" id="btn-chat" title="Chat" aria-label="Table talk">💬<span class="chat-badge hidden" id="chat-badge">0</span></button>
         </div>
         <button class="hud-code hidden" id="hud-code" title="Tap to copy — share to invite or rejoin"></button>
       </div>
@@ -267,7 +267,7 @@
 
     <!-- Action dock -->
     <footer class="dock">
-      <div class="dock-msg" id="dock-msg">&nbsp;</div>
+      <div class="dock-msg" id="dock-msg" role="status" aria-live="polite" aria-atomic="true">&nbsp;</div>
       <div class="dock-buttons" id="dock-buttons"></div>
     </footer>
   </main>
@@ -292,9 +292,9 @@
   <aside class="chat hidden" id="chat-panel">
     <div class="chat-head">
       <span class="chat-title">TABLE TALK</span>
-      <button class="chat-close" id="btn-chat-close" title="Close chat">✕</button>
+      <button class="chat-close" id="btn-chat-close" title="Close chat" aria-label="Close chat">✕</button>
     </div>
-    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-label="Table talk"></div>
     <p class="chat-hint" id="chat-hint">Tap a message to report or block its sender.</p>
     <form class="chat-form" id="chat-form">
       <input class="chat-input" id="chat-input" maxlength="160" autocomplete="off"
@@ -337,11 +337,13 @@
   <script src="engine4.js"></script>
   <script src="ai.js"></script>
   <script src="ai4.js"></script>
+  <script src="netconfig.js"></script>
   <script src="net.js"></script>
   <script src="sound.js"></script>
   <script src="haptics.js"></script>
   <script src="moderation.js"></script>
   <script src="nativeback.js"></script>
+  <script src="share.js"></script>
   <script src="ui.js"></script>
 
   <!-- Register the service worker (installable PWA + offline play) -->

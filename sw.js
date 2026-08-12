@@ -2,7 +2,7 @@
    Makes the game installable and fully playable offline (vs the AI).
    Bump CACHE_VERSION whenever any cached asset changes so clients refresh. */
 
-const CACHE_VERSION = 'monolito-v6';
+const CACHE_VERSION = 'monolito-v8';
 const CACHE_NAME = `${CACHE_VERSION}`;
 
 // App shell: everything needed to boot and play solo vs the AI, offline.
@@ -17,11 +17,13 @@ const CORE_ASSETS = [
   './engine4.js',
   './ai.js',
   './ai4.js',
+  './netconfig.js',
   './net.js',
   './sound.js',
   './haptics.js',
   './moderation.js',
   './nativeback.js',
+  './share.js',
   './ui.js',
   './manifest.webmanifest',
   './icon-192.png',

@@ -13,6 +13,10 @@ www/
 ios/App/App/public/
 android/app/src/main/assets/public/
 
+# Playwright output — traces, screenshots and the HTML report are per-run
+test-results/
+playwright-report/
+
 # Native build output
 *.apk
 *.aab

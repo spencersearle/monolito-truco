@@ -30,11 +30,13 @@ const ASSETS = [
   'engine4.js',
   'ai.js',
   'ai4.js',
+  'netconfig.js',
   'net.js',
   'sound.js',
   'haptics.js',
   'moderation.js',
   'nativeback.js',
+  'share.js',
   'ui.js',
 ];
 

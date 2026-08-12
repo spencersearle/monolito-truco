@@ -56,6 +56,11 @@ Under the hood:
 
 - Peer-to-peer over WebRTC ([PeerJS](https://peerjs.com), vendored), so the
   whole site still ships as static files on GitHub Pages — no game server
+- The two pieces of infrastructure that peer-to-peer still needs — a broker to
+  introduce players and TURN to get them through a hostile network — live in
+  `netconfig.js`. It defaults to PeerJS's free public broker and STUN only;
+  `peerserver/` is a deployable replacement for the first, and its README
+  covers the second
 - Every browser runs the full rules engine in lockstep: the host deals and
   broadcasts the hands, and every action is replicated. In 2v2 the host is
   authoritative — guests send intents, the host validates, applies, and

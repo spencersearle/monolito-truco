@@ -1,0 +1,38 @@
+# fly.io deployment for the Monolito signalling broker.
+# Rename the app if you like; whatever you choose becomes the hostname you
+# paste into netconfig.js as BROKER.host.
+
+app = "monolito-peer"
+primary_region = "iad"          # move this to the region most of your players are in
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 9000
+  force_https = true            # PeerJS clients on an https page can only talk wss
+  # Signalling sockets must stay open for the length of a game, so the machine
+  # must not be stopped out from under them. It can still scale to zero when
+  # genuinely nobody is playing, at the cost of a cold start on the next table.
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 5000
+    hard_limit = 10000
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "10s"
+  method = "GET"
+  path = "/health"
+
+# 256MB holds a few thousand idle signalling sockets. Watch /health and bump
+# this before you bump the machine count — one bigger machine is simpler than
+# two, and two brokers cannot see each other's peer ids without extra work.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
